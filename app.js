@@ -348,8 +348,8 @@
     }
 
     // ---- DnD for tasks ----
-    document.addEventListener('dragstart', e=>{ const t=e.target.closest?.('.task'); if(!t) return; state.draggingId=t.dataset.id; }, true);
-    document.addEventListener('dragend', ()=>{ state.draggingId=null; }, true);
+document.addEventListener('dragstart', e=>{ const t=e.target.closest?.('.task'); if(!t) return; state.draggingId=t.dataset.id; }, true);
+document.addEventListener('dragend', ()=>{ state.draggingId=null; onDragEnd(); }, true);
     document.addEventListener('dragover', e=>{ const dz=e.target.closest?.('.droppable'); if(!dz) return; e.preventDefault(); dz.classList.add('drag-over'); });
     document.addEventListener('dragleave', e=>{ const dz=e.target.closest?.('.droppable'); if(!dz) return; dz.classList.remove('drag-over'); });
     document.addEventListener('drop', e=>{
@@ -414,22 +414,30 @@
     setInterval(()=>{ if(el.datePicker.value===getTodayISO()) render(); }, 60000);
   }
 })();
+
+function dropIntoHour(slotEl, chipEl) {
+  chipEl.style.position = '';
+  chipEl.style.transform = '';
+  chipEl.style.left = '';
+  chipEl.style.top = '';
+  chipEl.classList.add('task-chip');
+
+  const list =
+    slotEl.querySelector('.task-list') ||
+    slotEl.appendChild(Object.assign(document.createElement('div'), { className: 'task-list' }));
+
+  list.appendChild(chipEl);
+}
+
+function onDragEnd() {
+  document.querySelectorAll('.drag-preview').forEach(el => el.remove());
+}
 (function(){
   const DZ_SEL = '.hour-dropzone, .hour-slot .dropzone, .hour .dropzone, .hour .tasks';
   const MAX = 4;
 
   const $  = (s,r=document)=>r.querySelector(s);
   const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
-
-  function ensureSummaryBefore(dz){
-    let bar = dz.previousElementSibling;
-    if(!(bar && bar.classList && bar.classList.contains('hour-summary'))){
-      bar = document.createElement('div');
-      bar.className = 'hour-summary';
-      dz.parentElement.insertBefore(bar, dz);
-    }
-    return bar;
-  }
 
   function openModal(nodes){
     const modal = $('#hourModal'); if(!modal) return;
@@ -447,36 +455,54 @@
     document.addEventListener('keydown', esc);
   }
 
+  function openHourModal(slotId){
+    const dz = document.querySelector('.hour-dropzone[data-hour="'+slotId+'"]');
+    if(!dz) return;
+    openModal($$('.task', dz));
+  }
+
   function renderSummary(dz){
     const tasks = $$('.task', dz);
     const count = tasks.length;
 
-    // Remove previous bar if any
-    const prev = dz.previousElementSibling;
-    if(prev && prev.classList && prev.classList.contains('hour-summary')) prev.remove();
+    // remove old list if no tasks
+    let list = $('.task-list', dz);
+    if(count === 0){ if(list) list.remove(); return; }
+    if(!list){
+      list = document.createElement('div');
+      list.className = 'task-list';
+      dz.appendChild(list);
+    }
+    list.innerHTML = '';
 
-    if(count < 2 || count > MAX) return; // only show for 2-4 tasks
+    // move tasks into list (hidden) and reset positioning
+    tasks.forEach(t=>{
+      dropIntoHour(dz, t);
+      t.style.display='none';
+    });
 
-    const bar = ensureSummaryBefore(dz);
-    bar.innerHTML = '';
-
-    for(let i=0;i<count;i++){
+    const MAX_VISIBLE = 3;
+    const visible = tasks.slice(0, MAX_VISIBLE);
+    visible.forEach(t=>{
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'summary-chip';
-      const txt = $('.task-text', tasks[i])?.textContent.trim() || ('Task ' + (i+1));
-      btn.textContent = txt.length > 20 ? txt.slice(0,20).trim() + '…' : txt;
+      btn.className = 'task-chip';
+      const txt = $('.task-text', t)?.textContent.trim() || 'Task';
+      btn.textContent = txt;
       btn.title = txt;
-      btn.addEventListener('click', e=>{ e.stopPropagation(); openModal([tasks[i]]); });
-      bar.appendChild(btn);
-    }
+      btn.dataset.taskid = t.dataset.id;
+      list.appendChild(btn);
+    });
 
-    const allBtn = document.createElement('button');
-    allBtn.type = 'button';
-    allBtn.className = 'view-all-btn';
-    allBtn.textContent = 'All tasks ('+count+')';
-    allBtn.addEventListener('click', e=>{ e.stopPropagation(); openModal(tasks); });
-    bar.appendChild(allBtn);
+    const extra = count - visible.length;
+    if(extra > 0){
+      const allBtn = document.createElement('button');
+      allBtn.type = 'button';
+      allBtn.className = 'task-chip all-chip';
+      allBtn.textContent = 'All tasks ('+count+')';
+      allBtn.addEventListener('click', e=>{ e.stopPropagation(); openHourModal(dz.dataset.hour); });
+      list.appendChild(allBtn);
+    }
   }
 
   function refreshAll(){
@@ -502,4 +528,6 @@
   } else {
     refreshAll(); $$(DZ_SEL).forEach(d=>mo.observe(d,{childList:true}));
   }
+
+  window.openHourModal = openHourModal;
 })();
