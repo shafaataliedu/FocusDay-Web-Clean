@@ -232,6 +232,7 @@
       });
 
       updateCategorySelect();
+      document.dispatchEvent(new Event('fdDayGridRendered'));
     }
 
     // ---- add task ----
@@ -465,14 +466,24 @@ function onDragEnd() {
     const tasks = $$('.task', dz);
     const count = tasks.length;
 
-    // remove old list if no tasks
+    // toggle flag for empty state
+    dz.classList.toggle('has-tasks', count > 0);
+
+    // remove any previous summary or placeholders when empty
+    if(count === 0){
+      dz.innerHTML = '';
+      return;
+    }
+
+    // ensure summary list container
     let list = $('.task-list', dz);
-    if(count === 0){ if(list) list.remove(); return; }
     if(!list){
       list = document.createElement('div');
       list.className = 'task-list';
       dz.appendChild(list);
     }
+
+    // reset list contents
     list.innerHTML = '';
 
     // move tasks into list (hidden) and reset positioning
@@ -523,11 +534,20 @@ function onDragEnd() {
 
   // Re-render as tasks move
   const mo = new MutationObserver(refreshAll);
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded', ()=>{ refreshAll(); $$(DZ_SEL).forEach(d=>mo.observe(d,{childList:true})); });
-  } else {
-    refreshAll(); $$(DZ_SEL).forEach(d=>mo.observe(d,{childList:true}));
+  function attachObservers(){
+    mo.disconnect();
+    $$(DZ_SEL).forEach(d=>mo.observe(d,{childList:true}));
   }
 
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', ()=>{ refreshAll(); attachObservers(); });
+  } else {
+    refreshAll(); attachObservers();
+  }
+
+  // refresh when main app re-renders the day grid
+  document.addEventListener('fdDayGridRendered', ()=>{ refreshAll(); attachObservers(); });
+
   window.openHourModal = openHourModal;
+  window.fdRefreshAll = refreshAll;
 })();

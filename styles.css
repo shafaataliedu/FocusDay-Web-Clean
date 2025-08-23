@@ -35,6 +35,12 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 .hour-dropzone{position:relative;padding:6px 10px;min-height:38px;border-bottom:1px solid var(--grid-line);background:transparent}
 .hour-dropzone.drag-over{background:var(--drop)}
 .hour-dropzone .task-list{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.hour-dropzone:not(.has-tasks)::before{
+  content:"(No tasks)";
+  color:var(--muted);
+  font-size:12px;
+  font-style:italic;
+}
 
 /* task chip styling */
 .task-chip{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:999px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
