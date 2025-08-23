@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FocusDay — Web Clean</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="left">
+        <button id="prevDay" title="Previous day">◀</button>
+        <input type="date" id="datePicker" />
+        <button id="nextDay" title="Next day">▶</button>
+      </div>
+      <div class="center">
+        <input id="mainGoal" class="main-goal-input" type="text" placeholder="Main goal for today…" />
+      </div>
+      <div class="right">
+        <button id="todayBtn" title="Jump to today">Today</button>
+        <button id="clearDayBtn" title="Clear this day">Clear Day</button>
+        <span id="saveStatus" class="save-status">Saved</span>
+      </div>
+    </header>
+
+    <section class="boards">
+      <aside class="palette">
+        <h2>Tasks <span id="backlogCount" class="count-pill">0</span></h2>
+
+        <div class="add-row">
+          <input id="newTaskInput" type="text" placeholder="Add a task and press Enter" />
+          <select id="catSelect" class="cat-select" title="Category"></select>
+          <input id="customCat" class="custom-cat" type="text" placeholder="New category name…" style="display:none" />
+          <button id="addTaskBtn">＋</button>
+          <button id="manageCatsBtn" class="ghost-btn" title="Manage categories">Manage</button>
+        </div>
+
+        <div id="catFilters" class="cat-filters"></div>
+
+        <div id="backlog" class="task-list droppable" data-dropzone="backlog" aria-label="Backlog list" tabindex="0"></div>
+
+        <div class="hint">
+          <p>Drag to reorder in Backlog. Drag into hours (hold <kbd>Ctrl</kbd> to duplicate).</p>
+          <p>Click ✓ to fade/complete (colored). No strikethroughs.</p>
+          <p>Reorder inside an hour by dragging tasks left/right.</p>
+        </div>
+      </aside>
+
+      <main class="day-grid" id="dayGrid"></main>
+    </section>
+
+    <footer class="app-footer">
+      <span>FocusDay — Web Clean • Tasks only • 24h • Saved categories • Drag reordering • Ctrl+drag duplicates • Auto-save</span>
+    </footer>
+  </div>
+
+  <!-- Category Manager Modal -->
+  <div id="catModal" class="modal">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="catModalTitle">
+      <div class="modal-header">
+        <h3 id="catModalTitle">Manage categories</h3>
+        <button id="catModalClose" class="icon-btn" title="Close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mgr-row">
+          <input id="catAddName" type="text" placeholder="Add new category…" />
+          <button id="catAddBtn">Add</button>
+          <span class="mgr-hint-inline">Drag ☰ to reorder • ★ sets default</span>
+        </div>
+
+        <ul id="catModalList" class="cat-modal-list" aria-label="Categories"></ul>
+      </div>
+
+      <div class="modal-footer">
+        <button id="catModalDone" class="primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <template id="taskTemplate">
+    <div class="task" draggable="true">
+      <button class="done-btn" title="Mark complete">✓</button>
+      <span class="cat-badge" title="Category"></span>
+      <span class="task-text"></span>
+      <div class="task-actions">
+        <button class="delete-btn" title="Delete">✕</button>
+      </div>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

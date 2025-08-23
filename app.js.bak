@@ -1,0 +1,201 @@
+(function(){
+  const hoursStart=0, hoursEnd=23;
+  const STORAGE_KEY='focusday.web.clean.v1';
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+
+  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  ready(init);
+
+  function init(){
+    const el={
+      datePicker: $('#datePicker'),
+      prevDay: $('#prevDay'),
+      nextDay: $('#nextDay'),
+      today: $('#todayBtn'),
+      clear: $('#clearDayBtn'),
+      mainGoal: $('#mainGoal'),
+      backlog: $('#backlog'),
+      addBtn: $('#addTaskBtn'),
+      newInput: $('#newTaskInput'),
+      dayGrid: $('#dayGrid'),
+      saveStatus: $('#saveStatus'),
+      tpl: $('#taskTemplate'),
+      modal: $('#hourModal'),
+      closeModal: $('#closeModal'),
+      modalHour: $('#modalHourLabel'),
+    };
+    if(Object.values(el).some(x=>!x)){ console.error('Missing DOM'); return; }
+
+    const state={ all: loadAll(), day:null, draggingId:null, openHour:null };
+
+    function getTodayISO(){ const d=new Date(),p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+    function fmtHour(h){ return String(h).padStart(2,'0')+':00'; }
+
+    function defaultDay(dateISO){
+      const hours={}; for(let h=hoursStart;h<=hoursEnd;h++) hours[fmtHour(h)]={ slots:[null,null,null,null] };
+      return { dateISO, mainGoal:'', backlog:[], hours };
+    }
+
+    function loadAll(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){ return {}; } }
+    function saveAll(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state.all)); flashSaved(); }
+    function flashSaved(){ el.saveStatus.textContent='Saved'; el.saveStatus.style.opacity='1'; setTimeout(()=>el.saveStatus.style.opacity='.85',600); }
+
+    function setActiveDate(iso){
+      el.datePicker.value = iso;
+      if(!state.all[iso]) state.all[iso]=defaultDay(iso);
+      state.day = JSON.parse(JSON.stringify(state.all[iso]));
+      render();
+    }
+    function persist(){
+      state.all[state.day.dateISO] = JSON.parse(JSON.stringify(state.day));
+      saveAll();
+    }
+
+    function createTaskNode(task){
+      const n = el.tpl.content.firstElementChild.cloneNode(true);
+      n.dataset.id = task.id;
+      n.setAttribute('draggable','true');
+      $('.task-text',n).textContent = task.text || '';
+      if(task.done) n.classList.add('done');
+      return n;
+    }
+
+    function render(){
+      el.mainGoal.value=state.day.mainGoal||'';
+      el.dayGrid.innerHTML='';
+      for(let h=hoursStart;h<=hoursEnd;h++){
+        const key=fmtHour(h);
+        const lbl=document.createElement('div'); lbl.className='hour-label'; lbl.textContent=key;
+        const dz=document.createElement('div'); dz.className='hour-dropzone droppable'; dz.dataset.hour=key; dz.dataset.dropzone='hour';
+        const cont=document.createElement('div'); cont.className='hour-summary';
+        const hour=state.day.hours[key];
+        const first=hour.slots.find(t=>!!t);
+        if(first){ cont.appendChild(createTaskNode(first)); }
+        else { cont.classList.add('empty'); cont.textContent='(No tasks)'; }
+        const rest=hour.slots.filter(t=>!!t).length-(first?1:0);
+        if(rest>0){ const more=document.createElement('span'); more.className='more-link'; more.dataset.hour=key; more.textContent=`+${rest} more — click`; cont.appendChild(more); }
+        dz.appendChild(cont);
+        el.dayGrid.appendChild(lbl); el.dayGrid.appendChild(dz);
+      }
+      el.backlog.innerHTML='';
+      state.day.backlog.forEach(t=> el.backlog.appendChild(createTaskNode(t)));
+      if(state.openHour) renderModal(state.openHour);
+    }
+
+    function renderModal(hourKey){
+      const hour=state.day.hours[hourKey];
+      el.modalHour.textContent=hourKey;
+      $$('.q-drop', el.modal).forEach(q=>{
+        const idx=parseInt(q.dataset.quarter,10);
+        q.innerHTML='';
+        const t=hour.slots[idx];
+        if(t) q.appendChild(createTaskNode(t));
+        q.parentElement.dataset.hour=hourKey;
+      });
+    }
+    function openModal(hourKey){ state.openHour=hourKey; renderModal(hourKey); el.modal.classList.remove('hidden'); }
+    function closeModal(){ state.openHour=null; el.modal.classList.add('hidden'); }
+    el.closeModal.addEventListener('click', closeModal);
+    el.modal.addEventListener('click', e=>{ if(e.target.classList.contains('modal-backdrop')) closeModal(); });
+
+    function newId(){ return Math.random().toString(36).slice(2,9); }
+    function addNewTask(text){
+      const t=(text||'').trim(); if(!t) return;
+      const task={ id:newId(), text:t, done:false };
+      state.day.backlog.push(task); persist(); render(); el.newInput.value='';
+    }
+    el.addBtn.addEventListener('click', ()=> addNewTask(el.newInput.value));
+    el.newInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addNewTask(el.newInput.value); }});
+
+    document.addEventListener('click', e=>{
+      const done=e.target.closest?.('.done-btn');
+      const del=e.target.closest?.('.delete-btn');
+      const more=e.target.closest?.('.more-link');
+      const hour=e.target.closest?.('.hour-dropzone');
+      if(done){ const id=done.closest('.task')?.dataset.id; if(!id) return; toggleDone(id); persist(); render(); return; }
+      if(del){ const id=del.closest('.task')?.dataset.id; if(!id) return; removeEverywhere(id); persist(); render(); return; }
+      if(more){ openModal(more.dataset.hour); return; }
+      if(hour && hour.dataset.hour){ openModal(hour.dataset.hour); return; }
+    });
+
+    function toggleDone(id){
+      const b=state.day.backlog.find(t=>t.id===id); if(b){ b.done=!b.done; return; }
+      for(const hk of Object.keys(state.day.hours)){
+        const s=state.day.hours[hk].slots;
+        for(let i=0;i<s.length;i++){ if(s[i] && s[i].id===id){ s[i].done=!s[i].done; return; } }
+      }
+    }
+    function removeEverywhere(id){
+      state.day.backlog=state.day.backlog.filter(t=>t.id!==id);
+      for(const hk of Object.keys(state.day.hours)){
+        const s=state.day.hours[hk].slots;
+        for(let i=0;i<s.length;i++){ if(s[i] && s[i].id===id){ s[i]=null; } }
+      }
+    }
+
+    document.addEventListener('dragstart', e=>{
+      const t=e.target.closest?.('.task'); if(!t) return;
+      state.draggingId=t.dataset.id;
+    }, true);
+    document.addEventListener('dragend', ()=>{ state.draggingId=null; }, true);
+    document.addEventListener('dragover', e=>{
+      const dz=e.target.closest?.('.droppable'); if(!dz) return;
+      e.preventDefault(); dz.classList.add('drag-over');
+    });
+    document.addEventListener('dragleave', e=>{
+      const dz=e.target.closest?.('.droppable'); if(!dz) return;
+      dz.classList.remove('drag-over');
+    });
+    document.addEventListener('drop', e=>{
+      const dz=e.target.closest?.('.droppable'); if(!dz) return;
+      e.preventDefault(); dz.classList.remove('drag-over');
+      const id=state.draggingId; if(!id) return;
+      const copy=e.ctrlKey||e.metaKey||e.altKey||e.shiftKey;
+      let moved=getTaskById(id); if(!moved) return;
+      if(copy){ moved={ id:newId(), text:moved.text, done:false }; } else { removeEverywhere(id); }
+
+      if(dz.id==='backlog'){
+        state.day.backlog.push(moved); persist(); render(); return;
+      }
+      if(dz.classList.contains('hour-dropzone')){
+        const key=dz.dataset.hour; const hour=state.day.hours[key];
+        const idx=hour.slots.findIndex(x=>!x);
+        if(idx===-1){ alert('This hour already has 4 tasks. Click to open to rearrange.'); persist(); render(); return; }
+        hour.slots[idx]=moved; persist(); render(); return;
+      }
+      const q=e.target.closest?.('.q-drop');
+      if(q){
+        const qIndex=parseInt(q.dataset.quarter,10);
+        const key=q.parentElement?.dataset?.hour || state.openHour;
+        const slots=state.day.hours[key].slots;
+        for(let i=0;i<4;i++){ if(slots[i] && slots[i].id===moved.id){ slots[i]=null; } }
+        if(slots[qIndex]){
+          const alt=slots.findIndex(x=>!x);
+          if(alt!==-1) slots[alt]=slots[qIndex];
+          else state.day.backlog.push(slots[qIndex]);
+        }
+        slots[qIndex]=moved; persist(); render(); return;
+      }
+    });
+
+    function getTaskById(id){
+      const b=state.day.backlog.find(t=>t.id===id);
+      if(b) return b;
+      for(const hk of Object.keys(state.day.hours)){
+        const s=state.day.hours[hk].slots;
+        for(const t of s){ if(t && t.id===id) return t; }
+      }
+      return null;
+    }
+
+    el.mainGoal.addEventListener('input', ()=>{ state.day.mainGoal=el.mainGoal.value; persist(); });
+    el.prevDay.addEventListener('click', ()=> shift(-1));
+    el.nextDay.addEventListener('click', ()=> shift(1));
+    el.today.addEventListener('click', ()=> setActiveDate(getTodayISO()));
+    el.clear.addEventListener('click', ()=>{ if(confirm('Clear this date?')){ state.day=defaultDay(el.datePicker.value||getTodayISO()); persist(); render(); }});
+    el.datePicker.addEventListener('change', ()=> setActiveDate(el.datePicker.value||getTodayISO()));
+    function shift(n){ const d=new Date(el.datePicker.value||getTodayISO()); d.setDate(d.getDate()+n); setActiveDate(d.toISOString().slice(0,10)); }
+
+    setActiveDate(getTodayISO());
+  }
+})();
