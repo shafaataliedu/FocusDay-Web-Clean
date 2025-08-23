@@ -350,8 +350,32 @@
     }
 
     // ---- DnD for tasks ----
-document.addEventListener('dragstart', e=>{ const t=e.target.closest?.('.task'); if(!t) return; state.draggingId=t.dataset.id; }, true);
-document.addEventListener('dragend', ()=>{ state.draggingId=null; onDragEnd(); }, true);
+document.addEventListener(
+  'dragstart',
+  e => {
+    const t = e.target.closest?.('.task, .task-chip');
+    if (!t) return;
+    state.draggingId = t.dataset.id || t.dataset.taskid;
+    if (t.classList.contains('task-chip')) {
+      t.classList.add('dragging');
+      t.style.width = t.getBoundingClientRect().width + 'px';
+    }
+  },
+  true
+);
+document.addEventListener(
+  'dragend',
+  e => {
+    const t = e.target.closest?.('.task-chip');
+    if (t) {
+      t.classList.remove('dragging');
+      t.style.width = '';
+    }
+    state.draggingId = null;
+    onDragEnd();
+  },
+  true
+);
     document.addEventListener('dragover', e=>{ const dz=e.target.closest?.('.droppable'); if(!dz) return; e.preventDefault(); dz.classList.add('drag-over'); });
     document.addEventListener('dragleave', e=>{ const dz=e.target.closest?.('.droppable'); if(!dz) return; dz.classList.remove('drag-over'); });
     document.addEventListener('drop', e=>{
@@ -374,9 +398,9 @@ document.addEventListener('dragend', ()=>{ state.draggingId=null; onDragEnd(); }
       if(dz.classList.contains('hour-dropzone')){
         ensureTimer(moved); // timers available in hours
         const hourKey=dz.dataset.hour, slots=state.day.hours[hourKey].slots;
-        const list=slots.filter(Boolean); const target=e.target.closest('.task'); let dest=list.length;
+        const list=slots.filter(Boolean); const target=e.target.closest('.task-chip'); let dest=list.length;
         if(target){ const rect=target.getBoundingClientRect(); const before=e.clientX < (rect.left + rect.width/2);
-          const intoIdx=list.findIndex(t=>t.id===target.dataset.id); dest = intoIdx + (before?0:1); }
+          const intoIdx=list.findIndex(t=>t.id===target.dataset.taskid); dest = intoIdx + (before?0:1); }
         list.splice(dest,0,moved); const trimmed=list.slice(0,4); for(let i=0;i<4;i++) slots[i]=trimmed[i]||null;
         persist(); render(); return;
       }
@@ -425,8 +449,8 @@ function dropIntoHour(slotEl, chipEl) {
   chipEl.classList.add('task-chip');
 
   const list =
-    slotEl.querySelector('.task-list') ||
-    slotEl.appendChild(Object.assign(document.createElement('div'), { className: 'task-list' }));
+    slotEl.querySelector('.task-lane') ||
+    slotEl.appendChild(Object.assign(document.createElement('div'), { className: 'task-lane' }));
 
   list.appendChild(chipEl);
 }
@@ -477,10 +501,10 @@ function onDragEnd() {
     }
 
     // ensure summary list container
-    let list = $('.task-list', dz);
+    let list = $('.task-lane', dz);
     if(!list){
       list = document.createElement('div');
-      list.className = 'task-list';
+      list.className = 'task-lane';
       dz.appendChild(list);
     }
 
@@ -499,6 +523,7 @@ function onDragEnd() {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'task-chip';
+      btn.setAttribute('draggable','true');
       const txt = $('.task-text', t)?.textContent.trim() || 'Task';
       btn.textContent = txt;
       btn.title = txt;
