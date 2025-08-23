@@ -217,13 +217,11 @@
         const dz=document.createElement('div'); dz.className='hour-dropzone droppable'; dz.dataset.hour=key; dz.dataset.dropzone='hour';
         if(isToday && h===nowH){ lbl.classList.add('hour-now'); dz.classList.add('hour-now'); }
 
-        const cont=document.createElement('div'); cont.className='hour-summary';
-        let tasks=state.day.hours[key].slots.filter(Boolean);
-        if(state.filterCat) tasks=tasks.filter(t=>t.cat===state.filterCat);
-        if(tasks.length===0){ cont.classList.add('empty'); cont.textContent='(No tasks)'; }
-        else tasks.forEach(t=>{ const node=createTaskNode(t,true); node.classList.add('in-hour'); cont.appendChild(node); });
+          let tasks=state.day.hours[key].slots.filter(Boolean);
+          if(state.filterCat) tasks=tasks.filter(t=>t.cat===state.filterCat);
+          tasks.forEach(t=>{ const node=createTaskNode(t,true); node.classList.add('in-hour'); dz.appendChild(node); });
 
-        dz.appendChild(cont); el.dayGrid.appendChild(lbl); el.dayGrid.appendChild(dz);
+          el.dayGrid.appendChild(lbl); el.dayGrid.appendChild(dz);
       }
 
       // backlog
@@ -416,217 +414,92 @@
     setInterval(()=>{ if(el.datePicker.value===getTodayISO()) render(); }, 60000);
   }
 })();
+(function(){
+  const DZ_SEL = '.hour-dropzone, .hour-slot .dropzone, .hour .dropzone, .hour .tasks';
+  const MAX = 4;
 
-// ---- Hour modal (read-only, timers & ✓ work via existing delegation) ----
-document.addEventListener('DOMContentLoaded', () => {
-  // Build overlay once
-  let overlay = document.querySelector('.hour-modal-overlay');
-  if(!overlay){
-    overlay = document.createElement('div');
-    overlay.className = 'hour-modal-overlay';
-    overlay.innerHTML = `
-      <div class="hour-modal">
-        <header>
-          <h3 id="hmTitle">00:00 — tasks</h3>
-          <button class="close" id="hmClose">Close</button>
-        </header>
-        <div id="hmBody">
-          <div class="empty">(No tasks)</div>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', (e)=>{
-      if(e.target.classList.contains('hour-modal-overlay') || e.target.id==='hmClose'){
-        overlay.classList.remove('show');
-      }
-    });
+  const $  = (s,r=document)=>r.querySelector(s);
+  const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
+
+  function ensureSummaryBefore(dz){
+    let bar = dz.previousElementSibling;
+    if(!(bar && bar.classList && bar.classList.contains('hour-summary'))){
+      bar = document.createElement('div');
+      bar.className = 'hour-summary';
+      dz.parentElement.insertBefore(bar, dz);
+    }
+    return bar;
   }
 
-  function openHourModal(hourKey){
-    const hmTitle = document.getElementById('hmTitle');
-    const hmBody  = document.getElementById('hmBody');
-    hmTitle.textContent = `${hourKey} — tasks`;
-
-    // Find that hour's dropzone next to the label
-    const labels = Array.from(document.querySelectorAll('.hour-label'));
-    const idx = labels.findIndex(l => l.textContent.trim() === hourKey);
-    let list = [];
-    if(idx >= 0){
-      const dz = labels[idx].nextElementSibling; // the hour dropzone
-      list = Array.from(dz.querySelectorAll('.task'));
-    }
-
-    hmBody.innerHTML = '';
-    if(list.length === 0){
+  function openModal(nodes){
+    const modal = $('#hourModal'); if(!modal) return;
+    const list  = $('#fd-modal-list'); list.innerHTML = '';
+    nodes.forEach(n=>{
       const div = document.createElement('div');
-      div.className = 'empty';
-      div.textContent = '(No tasks)';
-      hmBody.appendChild(div);
-    }else{
-      const container = document.createElement('div');
-      container.className = 'hour-list';
-      // clone tasks so we don’t move originals; keep data-id so ✓/timer/delete still work
-      list.forEach(n => {
-        const c = n.cloneNode(true);
-        c.removeAttribute('draggable'); // read-only in modal
-        container.appendChild(c);
-      });
-      hmBody.appendChild(container);
-    }
-    overlay.classList.add('show');
-  }
-
-  // Click any hour label to open that hour in the modal
-  document.addEventListener('click', (e)=>{
-    const label = e.target.closest('.hour-label');
-    if(!label) return;
-    const key = label.textContent.trim();
-    if(/^\d{2}:\d{2}$/.test(key)) openHourModal(key);
-  });
-});
-
-// UI guardrail: block more than 4 tasks per hour before the app's handler runs
-(function(){
-  // lightweight toast
-  let toastTimer;
-  function toast(msg){
-    let t = document.getElementById('fdToast');
-    if(!t){
-      t = document.createElement('div');
-      t.id = 'fdToast';
-      Object.assign(t.style, {
-        position:'fixed', left:'50%', bottom:'24px', transform:'translateX(-50%)',
-        background:'#111', color:'#fff', padding:'8px 12px', borderRadius:'10px',
-        fontSize:'14px', zIndex:99999, boxShadow:'0 6px 24px rgba(0,0,0,.25)'
-      });
-      document.body.appendChild(t);
-    }
-    t.textContent = msg;
-    t.style.opacity = '1';
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(()=>{ t.style.opacity='0'; }, 1800);
-  }
-
-  // capture drop before app's own drop handler
-  document.addEventListener('drop', (e)=>{
-    const dz = e.target.closest('.hour-dropzone');
-    if(!dz) return;
-    const currentCount = dz.querySelectorAll('.task').length;
-    if(currentCount >= 4){
-      e.preventDefault();
-      e.stopPropagation();
-      toast('Max 4 tasks in an hour');
-    }
-  }, true);
-})();
-
-// ===== Hour Tasks modal (read-only list; uses current DOM) =====
-(function(){
-  if (window.__fdHourModalInit) return;
-  window.__fdHourModalInit = true;
-
-  // Build overlay once
-  let ov = document.querySelector('.fd-hour-overlay');
-  if(!ov){
-    ov = document.createElement('div');
-    ov.className = 'fd-hour-overlay';
-    ov.innerHTML = `
-      <div class="fd-hour-modal">
-        <header>
-          <h3 id="fdHourTitle">00:00 — tasks</h3>
-          <button class="fd-hour-close" id="fdHourClose">Close</button>
-        </header>
-        <div id="fdHourBody">
-          <div class="empty">(No tasks)</div>
-        </div>
-      </div>`;
-    document.body.appendChild(ov);
-    ov.addEventListener('click', (e)=>{
-      if(e.target.classList.contains('fd-hour-overlay') || e.target.id==='fdHourClose'){
-        ov.classList.remove('show');
-      }
+      div.className = 'fd-modal-item';
+      div.textContent = (n.innerText || n.textContent || '').trim().replace(/\s+/g,' ');
+      list.appendChild(div);
     });
+    modal.style.display = 'block';
+    const close = ()=>{ modal.style.display = 'none'; document.removeEventListener('keydown', esc); };
+    $('.fd-modal-close', modal)?.addEventListener('click', close);
+    $('.fd-modal-backdrop', modal)?.addEventListener('click', close);
+    const esc = (e)=>{ if(e.key==='Escape') close(); };
+    document.addEventListener('keydown', esc);
   }
 
-  function openHourModal(hourKey){
-    const title = document.getElementById('fdHourTitle');
-    const body  = document.getElementById('fdHourBody');
-    title.textContent = `${hourKey} — tasks`;
+  function renderSummary(dz){
+    const tasks = $$('.task', dz);
+    const count = tasks.length;
 
-    // find the hour label that matches hourKey, then its dropzone
-    const labels = Array.from(document.querySelectorAll('.hour-label'));
-    const i = labels.findIndex(l => l.textContent.trim() === hourKey);
-    body.innerHTML = '';
-    if(i<0){
-      body.innerHTML = '<div class="empty">(No tasks)</div>';
-    }else{
-      const dz = labels[i].nextElementSibling;
-      const list = Array.from(dz.querySelectorAll('.task'));
-      if(list.length===0){
-        body.innerHTML = '<div class="empty">(No tasks)</div>';
-      }else{
-        const wrap = document.createElement('div');
-        wrap.className='fd-hour-list';
-        list.forEach(n=>{
-          const c = n.cloneNode(true);     // read-only copy
-          c.removeAttribute('draggable');
-          wrap.appendChild(c);
-        });
-        body.appendChild(wrap);
-      }
+    // Remove previous bar if any
+    const prev = dz.previousElementSibling;
+    if(prev && prev.classList && prev.classList.contains('hour-summary')) prev.remove();
+
+    if(count <= 1) return;  // show original single chip; no summary needed
+
+    const bar = ensureSummaryBefore(dz);
+    bar.innerHTML = '';
+
+    const showCount = Math.min(count, MAX);
+    for(let i=0;i<showCount;i++){
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'summary-chip';
+      btn.textContent = 'Task ' + (i+1);
+      btn.addEventListener('click', e=>{ e.stopPropagation(); openModal([tasks[i]]); });
+      bar.appendChild(btn);
     }
-    ov.classList.add('show');
-  }
-  window.__fdOpenHour = openHourModal;
 
-  // Open modal when clicking an hour label
-  document.addEventListener('click', (e)=>{
-    const lbl = e.target.closest('.hour-label');
-    if(!lbl) return;
-    const key = lbl.textContent.trim();
-    if(/^\d{2}:\d{2}$/.test(key)) openHourModal(key);
-  });
-})();
-
-// ===== UI guard: block >4 tasks per hour at drop time (toast + open modal) =====
-(function(){
-  if (window.__fdDropGuardInit) return;
-  window.__fdDropGuardInit = true;
-
-  // Tiny toast
-  let tt, timer;
-  function toast(msg){
-    if(!tt){
-      tt = document.createElement('div');
-      tt.id='fdToast';
-      Object.assign(tt.style,{
-        position:'fixed',left:'50%',bottom:'24px',transform:'translateX(-50%)',
-        background:'#111',color:'#fff',padding:'8px 12px',borderRadius:'10px',
-        fontSize:'14px',zIndex:99999,boxShadow:'0 6px 24px rgba(0,0,0,.25)',opacity:'0',
-        transition:'opacity .15s ease'
-      });
-      document.body.appendChild(tt);
-    }
-    tt.textContent = msg;
-    tt.style.opacity='1';
-    clearTimeout(timer);
-    timer=setTimeout(()=>tt.style.opacity='0', 1600);
+    const allBtn = document.createElement('button');
+    allBtn.type = 'button';
+    allBtn.className = 'view-all-btn';
+    allBtn.textContent = 'All tasks ('+count+')';
+    allBtn.addEventListener('click', e=>{ e.stopPropagation(); openModal(tasks); });
+    bar.appendChild(allBtn);
   }
 
-  // Capture-phase drop interceptor
-  document.addEventListener('drop', (e)=>{
-    const dz = e.target.closest('.hour-dropzone');
-    if(!dz) return;
-    const label = dz.previousElementSibling?.textContent?.trim() || '';
-    const count = dz.querySelectorAll('.task').length;
-    if(count >= 4){
-      e.preventDefault();
-      e.stopPropagation();
-      toast('Max 4 tasks in this hour');
-      if (window.__fdOpenHour && /^\d{2}:\d{2}$/.test(label)) {
-        // open after a tick so the blocked drop doesn't re-trigger
-        setTimeout(()=>window.__fdOpenHour(label), 50);
-      }
+  function refreshAll(){
+    $$(DZ_SEL).forEach(renderSummary);
+  }
+
+  // Hard-limit: prevent 5th drop
+  document.addEventListener('drop', function(e){
+    const dz = e.target.closest(DZ_SEL); if(!dz) return;
+    if(dz.querySelectorAll('.task').length >= MAX){
+      e.preventDefault(); e.stopPropagation();
+      let t = $('#fd-toast');
+      if(!t){ t = document.createElement('div'); t.id='fd-toast'; t.className='fd-toast'; document.body.appendChild(t); }
+      t.textContent = 'Only '+MAX+' tasks allowed in one hour.'; t.classList.add('show');
+      setTimeout(()=>t.classList.remove('show'), 1600);
     }
   }, true);
+
+  // Re-render as tasks move
+  const mo = new MutationObserver(refreshAll);
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', ()=>{ refreshAll(); $$(DZ_SEL).forEach(d=>mo.observe(d,{childList:true})); });
+  } else {
+    refreshAll(); $$(DZ_SEL).forEach(d=>mo.observe(d,{childList:true}));
+  }
 })();
