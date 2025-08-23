@@ -569,3 +569,18 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 }
 /* Completed = softly filled, easy to see */
 .task.done{ background:#eef8ff; border-color:#cfeaff; color:#374151; }
+
+/* --- Hour summary: side-by-side tasks --- */
+.hour-summary{
+  display:flex !important;
+  flex-direction:row !important;
+  flex-wrap:wrap;
+  gap:8px !important;
+}
+.hour-summary .task,
+.hour-dropzone .task{
+  width:auto !important;
+  max-width:100% !important;
+  margin:0 !important;
+}
+.hour-summary .task + .task{ margin-top:0 !important; }
