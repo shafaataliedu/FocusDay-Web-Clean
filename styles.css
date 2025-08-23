@@ -14,10 +14,12 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 .main-goal-input{min-width:480px;font-weight:600} .save-status{color:var(--muted);font-size:12px;opacity:.85}
 
 .boards{display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px;height:calc(100% - 120px)}
-.palette{background:var(--panel);border:1px solid var(--grid-line);border-radius:14px;padding:12px;display:flex;flex-direction:column;min-height:0}
+/* Palette container */
+.palette{background:var(--panel);border:1px solid var(--grid-line);border-radius:14px;padding:12px;display:flex;flex-direction:column;min-height:0;overflow:hidden} /* prevent any child from spilling out */
 .palette h2{margin:4px 0 8px 0;font-size:16px;color:var(--muted);display:flex;align-items:center;gap:8px}
 .count-pill{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;padding:0 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-weight:700;font-size:12px}
-.add-row{display:flex;gap:8px;align-items:center}
+/* Add row container */
+.add-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .custom-cat{min-width:120px}
 
 .cat-filters{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
@@ -57,13 +59,11 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 
 @media (max-width:1100px){.boards{grid-template-columns:1fr}.palette{order:2}.day-grid{order:1}.main-goal-input{min-width:240px;width:100%}}
 
-/* --- Fix: keep + in the Add row (no overflow into the grid) --- */
-.add-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+/* Add-row layout: wrap inputs and buttons without overflow */
 #newTaskInput{flex:1 1 200px;min-width:0}
 .cat-select{flex:0 0 140px}
 #customCat{flex:1 1 160px}   /* shows only when "Custom…" is selected */
-#addTaskBtn{flex:0 0 auto}
-.palette{overflow:hidden}    /* prevent any child from spilling out */
+#addTaskBtn,#manageCatsBtn{flex:0 0 auto}
 
 /* Count pill inside filter chips */
 .chip-count{
@@ -78,14 +78,6 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 .ghost-btn{background:transparent;border-color:var(--grid-line)}
 .ghost-btn:hover{border-color:var(--accent)}
 
-/* Keep + in row */
-.add-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-#newTaskInput{flex:1 1 220px;min-width:0}
-.cat-select{flex:0 0 150px}
-#customCat{flex:1 1 180px}
-#addTaskBtn,#manageCatsBtn{flex:0 0 auto}
-.palette{overflow:hidden}
-
 /* Category Manager */
 .cat-manager{margin-top:10px;padding:10px;border:1px solid var(--grid-line);border-radius:12px;background:var(--panel-2)}
 .mgr-row{display:flex;gap:8px;margin-bottom:8px}
@@ -94,18 +86,6 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 .cat-item .cat-name{flex:1}
 .cat-item .pill-default{padding:2px 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:11px}
 .mgr-hint{margin-top:6px;color:var(--muted);font-size:12px}
-
-/* Filter chip count (already added earlier, kept here for completeness) */
-.chip-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 6px;margin-left:6px;border-radius:999px;background:#eef2ff;color:#3730a3;font-weight:700;font-size:11px}
-.filter-chip.active .chip-count{background:#c7d2fe}
-
-/* ---------- Layout tidy for add row ---------- */
-.add-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-#newTaskInput{flex:1 1 220px;min-width:0}
-.cat-select{flex:0 0 150px}
-#customCat{flex:1 1 180px}
-#addTaskBtn,#manageCatsBtn{flex:0 0 auto}
-.palette{overflow:hidden}
 
 /* ---------- Modal ---------- */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:1000}
