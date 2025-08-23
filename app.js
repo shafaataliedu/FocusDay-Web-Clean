@@ -233,6 +233,7 @@
 
       updateCategorySelect();
       document.dispatchEvent(new Event('fdDayGridRendered'));
+      if(typeof window.fdRefreshAll==='function') window.fdRefreshAll();
     }
 
     // ---- add task ----
