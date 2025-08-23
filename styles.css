@@ -503,7 +503,10 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 
 /* 1) Hour body stacks vertically and grows with content */
 .hour-dropzone{
-  display:block !important;
+  display:flex !important;
+  flex-wrap:wrap !important;
+  gap:8px !important;
+  align-items:stretch !important;
   height:auto !important;
   min-height:68px !important;
   overflow:visible !important;
@@ -516,10 +519,9 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
   gap:8px !important;
 }
 
-/* 2) Task cards must be in normal flow, full width */
-.hour-summary .task,
-.hour-dropzone .task{
-  position:static !important;   /* <-- key: cancel absolute/relative offsets */
+/* 2) Task cards must be in normal flow */
+.hour-summary .task{
+  position:static !important;   /* cancel absolute/relative offsets */
   left:auto !important;
   right:auto !important;
   top:auto !important;
@@ -529,6 +531,17 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
   max-width:100% !important;
   box-sizing:border-box !important;
   z-index:1 !important;
+}
+
+.hour-dropzone > .task {
+  position: static !important;
+  inset: auto !important;          /* replaces left/top/right/bottom */
+  transform: none !important;
+  flex: 1 1 calc(50% - 8px) !important;  /* two per row */
+  max-width: calc(50% - 8px) !important;
+  min-width: 240px;
+  box-sizing: border-box !important;
+  z-index: 1 !important;
 }
 
 /* Keep your 5-column alignment within each task */
@@ -546,14 +559,6 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 
 /* Completed = softly filled (no strikethrough) */
 .task.done{ background:#eef8ff; border-color:#cfeaff; color:#374151; }
-/* Nuclear override to kill absolute positioning from any source */
-.hour-dropzone{ overflow:visible !important; height:auto !important; }
-.hour-summary{ display:flex !important; flex-direction:column !important; gap:8px !important; }
-.hour-dropzone .task{
-  position:static !important; left:auto !important; top:auto !important;
-  right:auto !important; bottom:auto !important; transform:none !important;
-  width:100% !important; max-width:100% !important; z-index:1 !important;
-}
 /* If inline styles keep reappearing, defeat them too: */
 .hour-dropzone .task[style*="position"]{ position:static !important; }
 .hour-dropzone .task[style*="left"]{ left:auto !important; }
@@ -570,17 +575,9 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 /* Completed = softly filled, easy to see */
 .task.done{ background:#eef8ff; border-color:#cfeaff; color:#374151; }
 
-/* --- Hour summary: side-by-side tasks --- */
-.hour-summary{
-  display:flex !important;
-  flex-direction:row !important;
-  flex-wrap:wrap;
-  gap:8px !important;
+@media (max-width: 640px){
+  .hour-dropzone > .task {
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+  }
 }
-.hour-summary .task,
-.hour-dropzone .task{
-  width:auto !important;
-  max-width:100% !important;
-  margin:0 !important;
-}
-.hour-summary .task + .task{ margin-top:0 !important; }
