@@ -10,9 +10,13 @@
   <div id="app">
     <header class="app-header">
       <div class="left">
-        <button id="prevDay" title="Previous day">◀</button>
+        <button id="prevDay" title="Previous day" aria-label="Previous day">
+          ◀<span class="visually-hidden">Previous day</span>
+        </button>
         <input type="date" id="datePicker" />
-        <button id="nextDay" title="Next day">▶</button>
+        <button id="nextDay" title="Next day" aria-label="Next day">
+          ▶<span class="visually-hidden">Next day</span>
+        </button>
       </div>
       <div class="center">
         <input id="mainGoal" class="main-goal-input" type="text" placeholder="Main goal for today…" />
@@ -32,7 +36,9 @@
           <input id="newTaskInput" type="text" placeholder="Add a task and press Enter" />
           <select id="catSelect" class="cat-select" title="Category"></select>
           <input id="customCat" class="custom-cat" type="text" placeholder="New category name…" style="display:none" />
-          <button id="addTaskBtn">＋</button>
+          <button id="addTaskBtn" title="Add task" aria-label="Add task">
+            ＋<span class="visually-hidden">Add task</span>
+          </button>
           <button id="manageCatsBtn" class="ghost-btn" title="Manage categories">Manage</button>
         </div>
 
