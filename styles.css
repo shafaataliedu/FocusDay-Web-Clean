@@ -149,12 +149,14 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 .timer-btn.reset{ }
 
 /* Hour summary bar */
-.hour-summary { display:flex; flex-wrap:wrap; gap:8px; padding:6px 10px; align-items:center; }
+.hour-summary { display:flex; gap:8px; padding:6px 10px; align-items:center; flex-wrap:nowrap; }
 .hour-summary .summary-chip, .hour-summary .view-all-btn {
   display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
   border:1px solid #d0d7de; border-radius:12px; background:#fff; font-size:12px; cursor:pointer;
 }
 .hour-summary .view-all-btn { background:#f7f7f7; }
+
+#fd-modal-list{ display:flex; flex-direction:column; gap:8px; }
 
 /* Optional toast */
 .fd-toast { position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
