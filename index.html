@@ -11,11 +11,13 @@
     <header class="app-header">
       <div class="left">
         <button id="prevDay" title="Previous day">◀</button>
-        <input type="date" id="datePicker" aria-label="Select date" />
+        <label for="datePicker" class="sr-only">Select date</label>
+        <input type="date" id="datePicker" />
         <button id="nextDay" title="Next day">▶</button>
       </div>
       <div class="center">
-        <input id="mainGoal" class="main-goal-input" type="text" placeholder="Main goal for today…" aria-label="Main goal for today" />
+        <label for="mainGoal" class="sr-only">Main goal for today</label>
+        <input id="mainGoal" class="main-goal-input" type="text" placeholder="Main goal for today…" />
       </div>
       <div class="right">
         <button id="todayBtn" title="Jump to today">Today</button>
@@ -29,9 +31,12 @@
         <h2>Tasks <span id="backlogCount" class="count-pill">0</span></h2>
 
         <div class="add-row">
-          <input id="newTaskInput" type="text" placeholder="Add a task and press Enter" aria-label="New task" />
+          <label for="newTaskInput" class="sr-only">New task</label>
+          <input id="newTaskInput" type="text" placeholder="Add a task and press Enter" />
+          <label for="catSelect" class="sr-only">Category</label>
           <select id="catSelect" class="cat-select" title="Category"></select>
-          <input id="customCat" class="custom-cat" type="text" placeholder="New category name…" style="display:none" aria-label="New category name" />
+          <label for="customCat" class="sr-only">New category name</label>
+          <input id="customCat" class="custom-cat" type="text" placeholder="New category name…" style="display:none" />
           <button id="addTaskBtn">＋</button>
           <button id="manageCatsBtn" class="ghost-btn" title="Manage categories">Manage</button>
         </div>
@@ -65,7 +70,8 @@
 
       <div class="modal-body">
         <div class="mgr-row">
-          <input id="catAddName" type="text" placeholder="Add new category…" aria-label="Add new category" />
+          <label for="catAddName" class="sr-only">Add new category</label>
+          <input id="catAddName" type="text" placeholder="Add new category…" />
           <button id="catAddBtn">Add</button>
           <span class="mgr-hint-inline">Drag ☰ to reorder • ★ sets default</span>
         </div>
