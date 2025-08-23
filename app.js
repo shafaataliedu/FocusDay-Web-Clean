@@ -319,6 +319,7 @@
       const play=e.target.closest?.('.timer-btn.play');
       const pause=e.target.closest?.('.timer-btn.pause');
       const reset=e.target.closest?.('.timer-btn.reset');
+      const inModal = e.target.closest('#hourModal');
 
       if(done){
         const id=done.closest('.task')?.dataset.id; if(!id) return;
@@ -329,11 +330,38 @@
           pauseTimer(id);
         }
         persist(); render();
+        if(inModal) window.closeHourModal && window.closeHourModal();
       }
-      if(del){ const id=del.closest('.task')?.dataset.id; if(!id) return; removeEverywhere(id); persist(); render(); }
-      if(play){ const id=play.closest('.task')?.dataset.id; if(!id) return; startTimer(id); }
-      if(pause){ const id=pause.closest('.task')?.dataset.id; if(!id) return; pauseTimer(id); }
-      if(reset){ const id=reset.closest('.task')?.dataset.id; if(!id) return; resetTimer(id); render(); }
+      if(del){
+        const id=del.closest('.task')?.dataset.id; if(!id) return;
+        removeEverywhere(id); persist(); render();
+        if(inModal) window.closeHourModal && window.closeHourModal();
+      }
+      if(play){
+        const id=play.closest('.task')?.dataset.id; if(!id) return;
+        startTimer(id); persist(); render();
+        if(inModal) window.closeHourModal && window.closeHourModal();
+      }
+      if(pause){
+        const id=pause.closest('.task')?.dataset.id; if(!id) return;
+        pauseTimer(id); persist(); render();
+        if(inModal) window.closeHourModal && window.closeHourModal();
+      }
+      if(reset){
+        const id=reset.closest('.task')?.dataset.id; if(!id) return;
+        resetTimer(id); persist(); render();
+        if(inModal) window.closeHourModal && window.closeHourModal();
+      }
+
+      const chip=e.target.closest?.('.task-chip');
+      if(chip && !chip.classList.contains('all-chip')){
+        window.openTaskModal && window.openTaskModal(chip.dataset.taskid);
+      }
+
+      const taskEl=e.target.closest?.('.task');
+      if(taskEl && !taskEl.closest('#hourModal') && !e.target.closest('button')){
+        window.openTaskModal && window.openTaskModal(taskEl.dataset.id);
+      }
     });
 
     function toggleDone(id){
@@ -465,26 +493,52 @@ function onDragEnd() {
   const $  = (s,r=document)=>r.querySelector(s);
   const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
 
-  function openModal(nodes){
+  let escHandler=null;
+  function closeHourModal(){
+    const modal = $('#hourModal');
+    if(!modal) return;
+    modal.style.display='none';
+    modal.dataset.hour='';
+    modal.dataset.task='';
+    if(escHandler){ document.removeEventListener('keydown', escHandler); escHandler=null; }
+  }
+
+  function openModal(nodes, attach=true){
     const modal = $('#hourModal'); if(!modal) return;
     const list  = $('#fd-modal-list'); list.innerHTML = '';
     nodes.forEach(n=>{
       const clone = n.cloneNode(true);
       clone.removeAttribute('draggable');
+      if(attach){
+        clone.addEventListener('click', e=>{
+          if(e.target.closest('button')) return;
+          openTaskModal(clone.dataset.id);
+        });
+      }
       list.appendChild(clone);
     });
-    modal.style.display = 'block';
-    const close = ()=>{ modal.style.display = 'none'; document.removeEventListener('keydown', esc); };
-    $('.fd-modal-close', modal)?.addEventListener('click', close);
-    $('.fd-modal-backdrop', modal)?.addEventListener('click', close);
-    const esc = (e)=>{ if(e.key==='Escape') close(); };
-    document.addEventListener('keydown', esc);
+    modal.style.display = 'flex';
+    if(escHandler){ document.removeEventListener('keydown', escHandler); }
+    escHandler = e=>{ if(e.key==='Escape') closeHourModal(); };
+    $('.fd-modal-close', modal)?.addEventListener('click', closeHourModal);
+    $('.fd-modal-backdrop', modal)?.addEventListener('click', closeHourModal);
+    document.addEventListener('keydown', escHandler);
   }
 
   function openHourModal(slotId){
     const dz = document.querySelector('.hour-dropzone[data-hour="'+slotId+'"]');
     if(!dz) return;
-    openModal($$('.task', dz));
+    const modal = $('#hourModal');
+    if(modal){ modal.dataset.hour=slotId; modal.dataset.task=''; }
+    openModal($$('.task', dz), true);
+  }
+
+  function openTaskModal(taskId){
+    const src = document.querySelector('.task[data-id="'+taskId+'"]');
+    if(!src) return;
+    const modal = $('#hourModal');
+    if(modal){ modal.dataset.task=taskId; modal.dataset.hour=''; }
+    openModal([src], false);
   }
 
   function renderSummary(dz){
@@ -494,9 +548,20 @@ function onDragEnd() {
     // toggle flag for empty state
     dz.classList.toggle('has-tasks', count > 0);
 
+    // ensure view button exists
+    let viewBtn = $('.hour-view-btn', dz);
+    if(!viewBtn){
+      viewBtn = document.createElement('button');
+      viewBtn.type='button';
+      viewBtn.className='hour-view-btn';
+      viewBtn.textContent='⋯';
+      viewBtn.addEventListener('click', e=>{ e.stopPropagation(); openHourModal(dz.dataset.hour); });
+      dz.appendChild(viewBtn);
+    }
+
     // remove any previous summary or placeholders when empty
     if(count === 0){
-      dz.innerHTML = '';
+      const list = $('.task-lane', dz); if(list) list.remove();
       return;
     }
 
@@ -575,5 +640,7 @@ function onDragEnd() {
   document.addEventListener('fdDayGridRendered', ()=>{ refreshAll(); attachObservers(); });
 
   window.openHourModal = openHourModal;
+  window.openTaskModal = openTaskModal;
   window.fdRefreshAll = refreshAll;
+  window.closeHourModal = closeHourModal;
 })();
