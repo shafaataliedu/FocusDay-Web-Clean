@@ -435,10 +435,9 @@
     const modal = $('#hourModal'); if(!modal) return;
     const list  = $('#fd-modal-list'); list.innerHTML = '';
     nodes.forEach(n=>{
-      const div = document.createElement('div');
-      div.className = 'fd-modal-item';
-      div.textContent = (n.innerText || n.textContent || '').trim().replace(/\s+/g,' ');
-      list.appendChild(div);
+      const clone = n.cloneNode(true);
+      clone.removeAttribute('draggable');
+      list.appendChild(clone);
     });
     modal.style.display = 'block';
     const close = ()=>{ modal.style.display = 'none'; document.removeEventListener('keydown', esc); };
@@ -456,13 +455,12 @@
     const prev = dz.previousElementSibling;
     if(prev && prev.classList && prev.classList.contains('hour-summary')) prev.remove();
 
-    if(count <= 1) return;  // show original single chip; no summary needed
+    if(count < 2 || count > MAX) return; // only show for 2-4 tasks
 
     const bar = ensureSummaryBefore(dz);
     bar.innerHTML = '';
 
-    const showCount = Math.min(count, MAX);
-    for(let i=0;i<showCount;i++){
+    for(let i=0;i<count;i++){
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'summary-chip';
