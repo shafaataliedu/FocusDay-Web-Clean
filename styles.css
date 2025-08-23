@@ -155,6 +155,12 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
   border:1px solid #d0d7de; border-radius:12px; background:#fff; font-size:12px; cursor:pointer;
 }
 .hour-summary .view-all-btn { background:#f7f7f7; }
+.hour-summary .summary-chip {
+  max-width:150px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
 
 #fd-modal-list{ display:flex; flex-direction:column; gap:8px; }
 

@@ -464,7 +464,9 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'summary-chip';
-      btn.textContent = 'Task ' + (i+1);
+      const txt = $('.task-text', tasks[i])?.textContent.trim() || ('Task ' + (i+1));
+      btn.textContent = txt.length > 20 ? txt.slice(0,20).trim() + '…' : txt;
+      btn.title = txt;
       btn.addEventListener('click', e=>{ e.stopPropagation(); openModal([tasks[i]]); });
       bar.appendChild(btn);
     }
