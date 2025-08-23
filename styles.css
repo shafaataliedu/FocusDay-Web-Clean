@@ -16,7 +16,7 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 
 .boards{display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px;height:calc(100% - 120px)}
 /* Palette container */
-.palette{background:var(--panel);border:1px solid var(--grid-line);border-radius:14px;padding:12px;display:flex;flex-direction:column;min-height:0;overflow:hidden} /* prevent any child from spilling out */
+.palette{background:var(--panel);border:1px solid var(--grid-line);border-radius:14px;padding:12px;display:flex;flex-direction:column;min-height:0;overflow:hidden;position:relative;z-index:10} /* prevent any child from spilling out */
 .palette h2{margin:4px 0 8px 0;font-size:16px;color:var(--muted);display:flex;align-items:center;gap:8px}
 .count-pill{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;padding:0 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-weight:700;font-size:12px}
 /* Add row container */
@@ -30,10 +30,18 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 .task-list{margin-top:8px;background:var(--panel-2);border:1px dashed var(--grid-line);border-radius:12px;padding:8px;min-height:140px;overflow:auto}
 .hint{margin-top:8px;color:var(--muted);font-size:12px}
 
-.day-grid{background:var(--panel);border:1px solid var(--grid-line);border-radius:14px;padding:0;display:grid;grid-template-columns:80px 1fr;height:100%;overflow:auto}
+.day-grid{background:var(--panel);border:1px solid var(--grid-line);border-radius:14px;padding:0;display:grid;grid-template-columns:80px 1fr;height:100%;overflow:auto;position:relative;z-index:1}
 .hour-label{padding:10px 8px;color:var(--muted);border-right:1px solid var(--grid-line);border-bottom:1px solid var(--grid-line);text-align:right;background:#fff}
-.hour-dropzone{min-height:56px;padding:6px 10px;border-bottom:1px solid var(--grid-line);background:transparent;display:flex;align-items:center;gap:8px}
+.hour-dropzone{position:relative;padding:6px 10px;min-height:38px;border-bottom:1px solid var(--grid-line);background:transparent}
 .hour-dropzone.drag-over{background:var(--drop)}
+.hour-dropzone .task-list{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+
+/* task chip styling */
+.task-chip{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:999px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.task-chip.all-chip{font-weight:600}
+
+/* drag preview ghost */
+.drag-preview{position:fixed;pointer-events:none;z-index:9999}
 
 /* Task chip */
 .task{background:#fff;border:1px solid #e6eaf2;border-left:4px solid var(--accent);border-radius:10px;padding:6px 8px;margin:6px 6px 6px 0;display:flex;align-items:center;gap:8px;box-shadow:0 1px 1px rgba(0,0,0,.04);user-select:none}
@@ -129,19 +137,6 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 .timer-btn.pause{ }
 .timer-btn.reset{ }
 
-/* Hour summary bar */
-.hour-summary { display:flex; gap:8px; padding:6px 10px; align-items:center; flex-wrap:nowrap; }
-.hour-summary .summary-chip, .hour-summary .view-all-btn {
-  display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
-  border:1px solid #d0d7de; border-radius:12px; background:#fff; font-size:12px; cursor:pointer;
-}
-.hour-summary .view-all-btn { background:#f7f7f7; }
-.hour-summary .summary-chip {
-  max-width:150px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
 
 #fd-modal-list{ display:flex; flex-direction:column; gap:8px; }
 
