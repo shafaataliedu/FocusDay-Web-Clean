@@ -365,7 +365,13 @@ document.addEventListener(
   e => {
     const t = e.target.closest?.('.task, .task-chip');
     if (!t) return;
-    state.draggingId = t.dataset.id || t.dataset.taskid;
+    const id = t.dataset.id || t.dataset.taskid || '';
+    state.draggingId = id;
+    // ensure some data is set so that dragging works across browsers
+    if (e.dataTransfer) {
+      e.dataTransfer.setData('text/plain', id);
+      e.dataTransfer.effectAllowed = 'move';
+    }
     if (t.classList.contains('task-chip')) {
       t.classList.add('dragging');
       t.style.width = t.getBoundingClientRect().width + 'px';
