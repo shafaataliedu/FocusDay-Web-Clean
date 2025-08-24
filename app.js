@@ -421,6 +421,19 @@ document.addEventListener(
       return null;
     }
 
+    function findTaskHour(id){
+      for(const hk of Object.keys(state.day.hours)){
+        const s=state.day.hours[hk].slots;
+        if(s.some(t=>t && t.id===id)) return hk;
+      }
+      return null;
+    }
+
+    window.fdGetTaskById = getTaskById;
+    window.fdFindTaskHour = findTaskHour;
+    window.fdGetHourTasks = hour => (state.day.hours[hour]?.slots.filter(Boolean) || []);
+    window.fdCreateTaskNode = (task, inHour=false) => createTaskNode(task, inHour);
+
     // ---- update timer text every second (lightweight, no full render) ----
     setInterval(()=>{
       const now=Date.now();
@@ -504,9 +517,26 @@ function onDragEnd() {
   }
 
   function openTaskModal(taskId){
-    const src = document.querySelector('.task[data-id="'+taskId+'"]');
-    if(!src) return;
-    openModal([src], false);
+    const getTask = window.fdGetTaskById;
+    const makeNode = window.fdCreateTaskNode;
+    if(!getTask || !makeNode) return;
+    const task = getTask(taskId);
+    if(!task) return;
+    const hour = window.fdFindTaskHour ? window.fdFindTaskHour(taskId) : null;
+    const node = makeNode(task, !!hour);
+    openModal([node], false);
+    if(hour){
+      const list = document.getElementById('fd-modal-list');
+      if(list){
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'hour-all-btn';
+        const count = window.fdGetHourTasks ? window.fdGetHourTasks(hour).length : 0;
+        btn.textContent = 'Show all tasks in this hour ('+count+')';
+        btn.addEventListener('click', ()=>{ window.openHourModal && window.openHourModal(hour); });
+        list.appendChild(btn);
+      }
+    }
   }
 
   function renderSummary(dz){

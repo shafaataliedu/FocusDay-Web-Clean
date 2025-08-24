@@ -214,6 +214,7 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 
 
 #fd-modal-list{ display:flex; flex-direction:column; gap:8px; }
+#fd-modal-list .hour-all-btn{ align-self:flex-start; margin-top:8px; }
 
 /* Optional toast */
 .fd-toast { position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
