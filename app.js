@@ -66,7 +66,7 @@
 
     const all = loadAll();
     const prefs = loadPrefs(all);
-    const state={ all, day:null, draggingId:null, backlogPlaceholderIndex:null, filterCat:null, prefs, dragPreviewEl:null };
+    const state={ all, day:null, draggingId:null, backlogPlaceholderIndex:null, filterCat:null, prefs, dragPreviewEl:null, dragOffsetX:0, dragOffsetY:0 };
 
     const flashSaved=()=>{ el.saveStatus.textContent='Saved'; el.saveStatus.style.opacity='1'; setTimeout(()=>el.saveStatus.style.opacity='.85',600); };
     const persist=()=>{ state.all[state.day.dateISO]=JSON.parse(JSON.stringify(state.day)); saveAll(state.all); flashSaved(); };
@@ -379,22 +379,30 @@ document.addEventListener(
       if (task) {
         const inHour = !!t.closest('.hour-dropzone');
         const node = createTaskNode(task, inHour);
-        node.style.position = 'absolute';
-        node.style.top = '-9999px';
-        node.style.left = '-9999px';
+        node.style.position = 'fixed';
         node.style.pointerEvents = 'none';
+        node.style.zIndex = '1000';
         node.classList.add('drag-image');
-        document.body.appendChild(node);
-        state.dragPreviewEl = node;
         const rect = t.getBoundingClientRect();
         const offsetX = e.clientX - rect.left;
         const offsetY = e.clientY - rect.top;
-        try { e.dataTransfer.setDragImage(node, offsetX, offsetY); } catch (err) {}
+        state.dragOffsetX = offsetX;
+        state.dragOffsetY = offsetY;
+        node.style.left = e.clientX - offsetX + 'px';
+        node.style.top = e.clientY - offsetY + 'px';
+        document.body.appendChild(node);
+        state.dragPreviewEl = node;
+        const img = new Image();
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+        try { e.dataTransfer.setDragImage(img, 0, 0); } catch (err) {}
       }
     }
     if (t.classList.contains('task-chip')) {
+      const chipRect = t.getBoundingClientRect();
       t.classList.add('dragging');
-      t.style.width = t.getBoundingClientRect().width + 'px';
+      t.style.width = chipRect.width + 'px';
+      t.style.left = e.clientX - state.dragOffsetX + 'px';
+      t.style.top = e.clientY - state.dragOffsetY + 'px';
     }
   },
   true
@@ -406,9 +414,13 @@ document.addEventListener(
     if (t) {
       t.classList.remove('dragging');
       t.style.width = '';
+      t.style.top = '';
+      t.style.left = '';
     }
     state.draggingId = null;
     state.backlogPlaceholderIndex = null;
+    state.dragOffsetX = 0;
+    state.dragOffsetY = 0;
     if (state.dragPreviewEl) { state.dragPreviewEl.remove(); state.dragPreviewEl = null; }
     onDragEnd();
     document.querySelectorAll('.droppable').forEach(el => {
@@ -418,7 +430,18 @@ document.addEventListener(
   },
   true
 );
-    document.addEventListener('dragover', e => {
+  document.addEventListener('dragover', e => {
+    if (state.dragPreviewEl) {
+      state.dragPreviewEl.style.left = e.clientX - state.dragOffsetX + 'px';
+      state.dragPreviewEl.style.top = e.clientY - state.dragOffsetY + 'px';
+    }
+    const chip = document.querySelector('.task-chip.dragging');
+    if (chip) {
+      chip.style.left = e.clientX - state.dragOffsetX + 'px';
+      chip.style.top = e.clientY - state.dragOffsetY + 'px';
+    }
+  }, true);
+  document.addEventListener('dragover', e => {
       const dz = e.target.closest?.('.droppable');
       if (!dz) return;
       e.preventDefault();
