@@ -1,6 +1,7 @@
 :root{
   --bg:#fafbfe; --panel:#fff; --panel-2:#f6f8fc; --text:#111827; --muted:#6b7280;
-  --accent:#2563eb; --accent-2:#16a34a; --danger:#dc2626; --grid-line:#e5e7eb; --drop:rgba(37,99,235,.12)
+  --accent:#2563eb; --accent-2:#16a34a; --danger:#dc2626; --grid-line:#e5e7eb;
+  --drop:rgba(37,99,235,.12); --drop-copy:rgba(22,163,74,.12)
 }
 *{box-sizing:border-box} html,body,#app{height:100%}
 body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,Noto Sans;color:var(--text);background:var(--bg)}
@@ -40,7 +41,8 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
   border:1px solid var(--border,#e5e7eb);
   background:var(--hour-bg,#fff);
 }
-.hour-dropzone.drag-over{background:var(--drop)}
+.droppable.drag-over{background:var(--drop)}
+.droppable.drag-over.copy{background:var(--drop-copy)}
 
 .hour-view-btn{
   position:absolute;
