@@ -367,6 +367,7 @@ document.addEventListener(
     if (!t) return;
     const id = t.dataset.id || t.dataset.taskid || '';
     state.draggingId = id;
+    t.classList.add('dragging');
     // ensure some data is set so that dragging works across browsers
     if (e.dataTransfer) {
       // Older Edge browsers only recognize 'text'
@@ -392,17 +393,8 @@ document.addEventListener(
         node.style.top = e.clientY - offsetY + 'px';
         document.body.appendChild(node);
         state.dragPreviewEl = node;
-        const img = new Image();
-        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
-        try { e.dataTransfer.setDragImage(img, 0, 0); } catch (err) {}
+        try { e.dataTransfer.setDragImage(node, offsetX, offsetY); } catch (err) {}
       }
-    }
-    if (t.classList.contains('task-chip')) {
-      const chipRect = t.getBoundingClientRect();
-      t.classList.add('dragging');
-      t.style.width = chipRect.width + 'px';
-      t.style.left = e.clientX - state.dragOffsetX + 'px';
-      t.style.top = e.clientY - state.dragOffsetY + 'px';
     }
   },
   true
@@ -410,12 +402,9 @@ document.addEventListener(
 document.addEventListener(
   'dragend',
   e => {
-    const t = e.target.closest?.('.task-chip');
+    const t = e.target.closest?.('.task, .task-chip');
     if (t) {
       t.classList.remove('dragging');
-      t.style.width = '';
-      t.style.top = '';
-      t.style.left = '';
     }
     state.draggingId = null;
     state.backlogPlaceholderIndex = null;
@@ -430,15 +419,10 @@ document.addEventListener(
   },
   true
 );
-  document.addEventListener('dragover', e => {
+document.addEventListener('dragover', e => {
     if (state.dragPreviewEl) {
       state.dragPreviewEl.style.left = e.clientX - state.dragOffsetX + 'px';
       state.dragPreviewEl.style.top = e.clientY - state.dragOffsetY + 'px';
-    }
-    const chip = document.querySelector('.task-chip.dragging');
-    if (chip) {
-      chip.style.left = e.clientX - state.dragOffsetX + 'px';
-      chip.style.top = e.clientY - state.dragOffsetY + 'px';
     }
   }, true);
   document.addEventListener('dragover', e => {
