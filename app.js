@@ -416,9 +416,17 @@ document.addEventListener(
       if(dz.classList.contains('hour-dropzone')){
         ensureTimer(moved); // timers available in hours
         const hourKey=dz.dataset.hour, slots=state.day.hours[hourKey].slots;
-        const list=slots.filter(Boolean); const target=e.target.closest('.task-chip'); let dest=list.length;
-        if(target){ const rect=target.getBoundingClientRect(); const before=e.clientX < (rect.left + rect.width/2);
-          const intoIdx=list.findIndex(t=>t.id===target.dataset.taskid); dest = intoIdx + (before?0:1); }
+        const list=slots.filter(Boolean);
+        const target=e.target.closest('.task-chip:not(.all-chip)');
+        let dest=list.length;
+        if(target){
+          const intoIdx=list.findIndex(t=>t.id===target.dataset.taskid);
+          if(intoIdx>=0){
+            const rect=target.getBoundingClientRect();
+            const before=e.clientX < (rect.left + rect.width/2);
+            dest = intoIdx + (before?0:1);
+          }
+        }
         list.splice(dest,0,moved); const trimmed=list.slice(0,4); for(let i=0;i<4;i++) slots[i]=trimmed[i]||null;
         persist(); render(); return;
       }
