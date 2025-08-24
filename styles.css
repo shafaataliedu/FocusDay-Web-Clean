@@ -95,11 +95,10 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 }
 .task-chip.all-chip{font-weight:600}
 
+
+.task.dragging,
 .task-chip.dragging{
-  opacity:.85;
-  cursor:grabbing;
-  position:fixed;
-  z-index:1000;
+  opacity:.6;
 }
 
 .task-chip .title{
