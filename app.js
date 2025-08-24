@@ -66,7 +66,7 @@
 
     const all = loadAll();
     const prefs = loadPrefs(all);
-    const state={ all, day:null, draggingId:null, filterCat:null, prefs };
+    const state={ all, day:null, draggingId:null, backlogPlaceholderIndex:null, filterCat:null, prefs };
 
     const flashSaved=()=>{ el.saveStatus.textContent='Saved'; el.saveStatus.style.opacity='1'; setTimeout(()=>el.saveStatus.style.opacity='.85',600); };
     const persist=()=>{ state.all[state.day.dateISO]=JSON.parse(JSON.stringify(state.day)); saveAll(state.all); flashSaved(); };
@@ -390,6 +390,7 @@ document.addEventListener(
       t.style.width = '';
     }
     state.draggingId = null;
+    state.backlogPlaceholderIndex = null;
     onDragEnd();
     document.querySelectorAll('.droppable').forEach(el => {
       el.classList.remove('drag-over');
@@ -410,8 +411,8 @@ document.addEventListener(
       const id = state.draggingId;
       if (!id) return;
 
-      // clear any existing previews
-      document.querySelectorAll('.drag-preview').forEach(el => el.remove());
+      // clear any existing previews/placeholders
+      document.querySelectorAll('.drag-preview, .drag-placeholder').forEach(el => el.remove());
 
       if (dz.id === 'backlog') {
         const tasks = Array.from(dz.querySelectorAll('.task')).filter(t => t.dataset.id !== id);
@@ -422,11 +423,15 @@ document.addEventListener(
           const before = e.clientY < rect.top + rect.height / 2;
           index = tasks.indexOf(target) + (before ? 0 : 1);
         }
-        const preview = document.createElement('div');
-        preview.className = 'task drag-preview';
-        preview.style.position = 'static';
-        if (index >= tasks.length) dz.appendChild(preview);
-        else dz.insertBefore(preview, tasks[index]);
+        const placeholder = document.createElement('div');
+        placeholder.className = 'task drag-placeholder';
+        if (index >= tasks.length) dz.appendChild(placeholder);
+        else dz.insertBefore(placeholder, tasks[index]);
+        state.backlogPlaceholderIndex = index;
+        const rect = dz.getBoundingClientRect();
+        const EDGE = 40;
+        if (e.clientY < rect.top + EDGE) dz.scrollTop -= 10;
+        else if (e.clientY > rect.bottom - EDGE) dz.scrollTop += 10;
         return;
       }
 
@@ -482,16 +487,12 @@ document.addEventListener(
       } else {
         removeEverywhere(id);
       }
+      const placeholderIndex = state.backlogPlaceholderIndex;
+      document.querySelectorAll('.drag-placeholder').forEach(el => el.remove());
+      state.backlogPlaceholderIndex = null;
 
       if (dz.id === 'backlog') {
-        const target = e.target.closest('.task:not(.drag-preview)');
-        let index = state.day.backlog.length;
-        if (target) {
-          const rect = target.getBoundingClientRect();
-          const before = e.clientY < rect.top + rect.height / 2;
-          const intoIdx = state.day.backlog.findIndex(t => t.id === target.dataset.id);
-          index = intoIdx + (before ? 0 : 1);
-        }
+        let index = placeholderIndex ?? state.day.backlog.length;
         state.day.backlog.splice(index, 0, moved);
         persist();
         render();
@@ -570,7 +571,7 @@ document.addEventListener(
 })();
 
 function onDragEnd() {
-  document.querySelectorAll('.drag-preview').forEach(el => el.remove());
+  document.querySelectorAll('.drag-preview, .drag-placeholder').forEach(el => el.remove());
   document.querySelectorAll('.droppable.copy').forEach(el => el.classList.remove('copy'));
 }
 (function(){
