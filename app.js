@@ -462,10 +462,16 @@ document.addEventListener('dragover', e => {
       }
 
       if (dz.classList.contains('hour-dropzone')) {
-        const chips = Array.from(dz.querySelectorAll('.task-chip')).filter(c => c.dataset.taskid !== id && !c.classList.contains('dragging'));
+        let lane = dz.querySelector('.task-lane');
+        if (!lane) {
+          lane = document.createElement('div');
+          lane.className = 'task-lane';
+          dz.appendChild(lane);
+        }
+        const chips = Array.from(lane.querySelectorAll('.task-chip')).filter(c => c.dataset.taskid !== id && !c.classList.contains('dragging'));
         let index = chips.length;
         const target = e.target.closest('.task-chip');
-        if (target) {
+        if (target && lane.contains(target)) {
           const rect = target.getBoundingClientRect();
           const before = e.clientX < rect.left + rect.width / 2;
           index = chips.indexOf(target) + (before ? 0 : 1);
@@ -473,8 +479,8 @@ document.addEventListener('dragover', e => {
         const preview = document.createElement('div');
         preview.className = 'task-chip drag-preview';
         preview.style.position = 'static';
-        if (index >= chips.length) dz.appendChild(preview);
-        else dz.insertBefore(preview, chips[index]);
+        if (index >= chips.length) lane.appendChild(preview);
+        else lane.insertBefore(preview, chips[index]);
       }
     });
 
@@ -529,12 +535,14 @@ document.addEventListener('dragover', e => {
         ensureTimer(moved); // timers available in hours
         const hourKey = dz.dataset.hour, slots = state.day.hours[hourKey].slots;
         const list = slots.filter(Boolean);
+        const lane = dz.querySelector('.task-lane');
+        const chips = lane ? Array.from(lane.querySelectorAll('.task-chip')).filter(c => !c.classList.contains('drag-preview')) : [];
         const target = e.target.closest('.task-chip:not(.drag-preview)');
         let dest = list.length;
-        if (target) {
+        if (target && chips.includes(target)) {
           const rect = target.getBoundingClientRect();
           const before = e.clientX < rect.left + rect.width / 2;
-          const intoIdx = list.findIndex(t => t.id === target.dataset.taskid);
+          const intoIdx = chips.indexOf(target);
           dest = intoIdx + (before ? 0 : 1);
         }
         list.splice(dest, 0, moved);
