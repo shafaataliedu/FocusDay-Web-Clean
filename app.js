@@ -494,6 +494,8 @@ function onDragEnd() {
     nodes.forEach(n=>{
       const clone = n.cloneNode(true);
       clone.removeAttribute('draggable');
+      // ensure visibility if source task was hidden in its hour slot
+      clone.style.display = '';
       if(attach){
         clone.addEventListener('click', e=>{
           if(e.target.closest('button')) return;
@@ -502,7 +504,8 @@ function onDragEnd() {
       }
       list.appendChild(clone);
     });
-    modal.style.display = 'block';
+    // use flex to center panel within viewport
+    modal.style.display = 'flex';
     const close = ()=>{ modal.style.display = 'none'; document.removeEventListener('keydown', esc); };
     $('.fd-modal-close', modal)?.addEventListener('click', close);
     $('.fd-modal-backdrop', modal)?.addEventListener('click', close);
