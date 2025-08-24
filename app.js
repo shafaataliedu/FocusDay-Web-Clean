@@ -391,6 +391,7 @@ document.addEventListener(
     }
     state.draggingId = null;
     onDragEnd();
+    document.querySelectorAll('.droppable').forEach(el => el.classList.remove('drag-over'));
   },
   true
 );
