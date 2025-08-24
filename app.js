@@ -393,16 +393,13 @@ document.addEventListener(
         node.style.pointerEvents = 'none';
         node.style.zIndex = '1000';
         node.classList.add('drag-image');
-        const rect = t.getBoundingClientRect();
-        const offsetX = e.clientX - rect.left;
-        const offsetY = e.clientY - rect.top;
-        state.dragOffsetX = offsetX;
-        state.dragOffsetY = offsetY;
-        node.style.left = e.clientX - offsetX + 'px';
-        node.style.top = e.clientY - offsetY + 'px';
+        state.dragOffsetX = 0;
+        state.dragOffsetY = 0;
+        node.style.left = e.clientX + 'px';
+        node.style.top = e.clientY + 'px';
         document.body.appendChild(node);
         state.dragPreviewEl = node;
-        try { e.dataTransfer.setDragImage(node, offsetX, offsetY); } catch (err) {}
+        try { e.dataTransfer.setDragImage(node, 0, 0); } catch (err) {}
       }
     }
   },
@@ -430,8 +427,8 @@ document.addEventListener(
 );
 document.addEventListener('dragover', e => {
     if (state.dragPreviewEl) {
-      state.dragPreviewEl.style.left = e.clientX - state.dragOffsetX + 'px';
-      state.dragPreviewEl.style.top = e.clientY - state.dragOffsetY + 'px';
+      state.dragPreviewEl.style.left = e.clientX + 'px';
+      state.dragPreviewEl.style.top = e.clientY + 'px';
     }
   }, true);
   document.addEventListener('dragover', e => {
@@ -732,7 +729,7 @@ function onDragEnd() {
       const allBtn = document.createElement('button');
       allBtn.type = 'button';
       allBtn.className = 'task-chip all-chip';
-      allBtn.textContent = 'All tasks ('+count+')';
+      allBtn.textContent = 'View all ('+count+')';
       allBtn.addEventListener('click', e=>{ e.stopPropagation(); openHourModal(dz.dataset.hour); });
       list.appendChild(allBtn);
     }

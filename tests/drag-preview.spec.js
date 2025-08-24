@@ -30,6 +30,6 @@ test('drag preview follows cursor', async ({ page }) => {
     left: parseFloat(el.style.left),
     top: parseFloat(el.style.top)
   }));
-  expect(Math.abs(pos.left - (moveX - 10))).toBeLessThanOrEqual(2);
-  expect(Math.abs(pos.top - (moveY - 10))).toBeLessThanOrEqual(2);
+  expect(Math.abs(pos.left - moveX)).toBeLessThanOrEqual(2);
+  expect(Math.abs(pos.top - moveY)).toBeLessThanOrEqual(2);
 });
