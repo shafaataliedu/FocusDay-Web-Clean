@@ -66,7 +66,7 @@
 
     const all = loadAll();
     const prefs = loadPrefs(all);
-    const state={ all, day:null, draggingId:null, backlogPlaceholderIndex:null, filterCat:null, prefs };
+    const state={ all, day:null, draggingId:null, backlogPlaceholderIndex:null, filterCat:null, prefs, dragPreviewEl:null };
 
     const flashSaved=()=>{ el.saveStatus.textContent='Saved'; el.saveStatus.style.opacity='1'; setTimeout(()=>el.saveStatus.style.opacity='.85',600); };
     const persist=()=>{ state.all[state.day.dateISO]=JSON.parse(JSON.stringify(state.day)); saveAll(state.all); flashSaved(); };
@@ -373,6 +373,24 @@ document.addEventListener(
       try { e.dataTransfer.setData('text/plain', id); } catch (err) {}
       try { e.dataTransfer.setData('text', id); } catch (err) {}
       e.dataTransfer.effectAllowed = 'copyMove';
+
+      // custom drag preview close to cursor showing full task details
+      const task = getTaskById(id);
+      if (task) {
+        const inHour = !!t.closest('.hour-dropzone');
+        const node = createTaskNode(task, inHour);
+        node.style.position = 'absolute';
+        node.style.top = '-9999px';
+        node.style.left = '-9999px';
+        node.style.pointerEvents = 'none';
+        node.classList.add('drag-image');
+        document.body.appendChild(node);
+        state.dragPreviewEl = node;
+        const rect = t.getBoundingClientRect();
+        const offsetX = e.clientX - rect.left;
+        const offsetY = e.clientY - rect.top;
+        try { e.dataTransfer.setDragImage(node, offsetX, offsetY); } catch (err) {}
+      }
     }
     if (t.classList.contains('task-chip')) {
       t.classList.add('dragging');
@@ -391,6 +409,7 @@ document.addEventListener(
     }
     state.draggingId = null;
     state.backlogPlaceholderIndex = null;
+    if (state.dragPreviewEl) { state.dragPreviewEl.remove(); state.dragPreviewEl = null; }
     onDragEnd();
     document.querySelectorAll('.droppable').forEach(el => {
       el.classList.remove('drag-over');
