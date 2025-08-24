@@ -466,8 +466,10 @@ document.addEventListener(
       const id = state.draggingId;
       if (!id) return;
 
-      // clear any existing previews/placeholders
-      document.querySelectorAll('.drag-preview, .drag-placeholder').forEach(el => el.remove());
+      // clear any existing previews/placeholders; also remove stray drag images
+      document
+        .querySelectorAll('.drag-preview, .drag-placeholder, .drag-image')
+        .forEach(el => el.remove());
 
       if (dz.id === 'backlog') {
         const tasks = Array.from(dz.querySelectorAll('.task')).filter(t => t.dataset.id !== id);
@@ -622,8 +624,16 @@ document.addEventListener(
 })();
 
 function onDragEnd() {
-  document.querySelectorAll('.drag-preview, .drag-placeholder').forEach(el => el.remove());
-  document.querySelectorAll('.droppable.copy').forEach(el => el.classList.remove('copy'));
+  // Clean up any temporary drag artifacts. Previously, only drag previews and
+  // placeholders were removed which could leave behind the custom drag image
+  // element (".drag-image") when a drag operation didn't finish cleanly. Those
+  // lingering elements appeared as "ghost" tasks on the page until refresh.
+  document
+    .querySelectorAll('.drag-preview, .drag-placeholder, .drag-image')
+    .forEach(el => el.remove());
+  document
+    .querySelectorAll('.droppable.copy')
+    .forEach(el => el.classList.remove('copy'));
 }
 (function(){
   const DZ_SEL = '.hour-dropzone, .hour-slot .dropzone, .hour .dropzone, .hour .tasks';
