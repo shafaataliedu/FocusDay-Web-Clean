@@ -369,7 +369,9 @@ document.addEventListener(
     state.draggingId = id;
     // ensure some data is set so that dragging works across browsers
     if (e.dataTransfer) {
-      e.dataTransfer.setData('text/plain', id);
+      // Older Edge browsers only recognize 'text'
+      try { e.dataTransfer.setData('text/plain', id); } catch (err) {}
+      try { e.dataTransfer.setData('text', id); } catch (err) {}
       e.dataTransfer.effectAllowed = 'move';
     }
     if (t.classList.contains('task-chip')) {
@@ -392,7 +394,7 @@ document.addEventListener(
   },
   true
 );
-    document.addEventListener('dragover', e=>{ const dz=e.target.closest?.('.droppable'); if(!dz) return; e.preventDefault(); dz.classList.add('drag-over'); });
+    document.addEventListener('dragover', e=>{ const dz=e.target.closest?.('.droppable'); if(!dz) return; e.preventDefault(); dz.classList.add('drag-over'); if(e.dataTransfer) e.dataTransfer.dropEffect='move'; });
     document.addEventListener('dragleave', e=>{ const dz=e.target.closest?.('.droppable'); if(!dz) return; dz.classList.remove('drag-over'); });
     document.addEventListener('drop', e=>{
       const dz=e.target.closest?.('.droppable'); if(!dz) return; e.preventDefault(); dz.classList.remove('drag-over');
