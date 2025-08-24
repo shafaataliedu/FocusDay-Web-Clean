@@ -66,7 +66,7 @@
 
     const all = loadAll();
     const prefs = loadPrefs(all);
-    const state={ all, day:null, draggingId:null, backlogPlaceholderIndex:null, filterCat:null, prefs, dragPreviewEl:null, dragOffsetX:0, dragOffsetY:0 };
+    const state={ all, day:null, draggingId:null, backlogPlaceholderIndex:null, filterCat:null, prefs, dragPreviewEl:null };
 
     const flashSaved=()=>{ el.saveStatus.textContent='Saved'; el.saveStatus.style.opacity='1'; setTimeout(()=>el.saveStatus.style.opacity='.85',600); };
     const persist=()=>{ state.all[state.day.dateISO]=JSON.parse(JSON.stringify(state.day)); saveAll(state.all); flashSaved(); };
@@ -392,13 +392,11 @@ document.addEventListener(
         node.style.position = 'fixed';
         node.style.pointerEvents = 'none';
         node.style.zIndex = '1000';
-        node.classList.add('drag-image');
-        state.dragOffsetX = 0;
-        state.dragOffsetY = 0;
-        node.style.left = e.clientX + 'px';
-        node.style.top = e.clientY + 'px';
-        document.body.appendChild(node);
-        state.dragPreviewEl = node;
+          node.classList.add('drag-image');
+          node.style.left = e.clientX + 'px';
+          node.style.top = e.clientY + 'px';
+          document.body.appendChild(node);
+          state.dragPreviewEl = node;
         try { e.dataTransfer.setDragImage(node, 0, 0); } catch (err) {}
       }
     }
@@ -412,12 +410,10 @@ document.addEventListener(
     if (t) {
       t.classList.remove('dragging');
     }
-    state.draggingId = null;
-    state.backlogPlaceholderIndex = null;
-    state.dragOffsetX = 0;
-    state.dragOffsetY = 0;
-    if (state.dragPreviewEl) { state.dragPreviewEl.remove(); state.dragPreviewEl = null; }
-    onDragEnd();
+      state.draggingId = null;
+      state.backlogPlaceholderIndex = null;
+      if (state.dragPreviewEl) { state.dragPreviewEl.remove(); state.dragPreviewEl = null; }
+      onDragEnd();
     document.querySelectorAll('.droppable').forEach(el => {
       el.classList.remove('drag-over');
       el.classList.remove('copy');
@@ -425,13 +421,12 @@ document.addEventListener(
   },
   true
 );
-document.addEventListener('dragover', e => {
-    if (state.dragPreviewEl) {
-      state.dragPreviewEl.style.left = e.clientX + 'px';
-      state.dragPreviewEl.style.top = e.clientY + 'px';
-    }
-  }, true);
   document.addEventListener('dragover', e => {
+      if (state.dragPreviewEl) {
+        state.dragPreviewEl.style.left = e.clientX + 'px';
+        state.dragPreviewEl.style.top = e.clientY + 'px';
+      }
+
       const dz = e.target.closest?.('.droppable');
       if (!dz) return;
       e.preventDefault();
@@ -483,7 +478,7 @@ document.addEventListener('dragover', e => {
         if (index >= chips.length) lane.appendChild(preview);
         else lane.insertBefore(preview, chips[index]);
       }
-    });
+    }, true);
 
     document.addEventListener('dragleave', e => {
       const dz = e.target.closest?.('.droppable');
