@@ -394,34 +394,123 @@ document.addEventListener(
   },
   true
 );
-    document.addEventListener('dragover', e=>{ const dz=e.target.closest?.('.droppable'); if(!dz) return; e.preventDefault(); dz.classList.add('drag-over'); if(e.dataTransfer) e.dataTransfer.dropEffect='move'; });
-    document.addEventListener('dragleave', e=>{ const dz=e.target.closest?.('.droppable'); if(!dz) return; dz.classList.remove('drag-over'); });
-    document.addEventListener('drop', e=>{
-      const dz=e.target.closest?.('.droppable'); if(!dz) return; e.preventDefault(); dz.classList.remove('drag-over');
-      const id=state.draggingId; if(!id) return;
-      const copy=e.ctrlKey||e.metaKey||e.altKey||e.shiftKey;
-      let moved=getTaskById(id); if(!moved) return;
-      if(copy){
-        moved={ id:Math.random().toString(36).slice(2,9), text:moved.text, done:false, cat:moved.cat, timer:{elapsed:0,running:false,startedAt:null} };
-      }else{
+    document.addEventListener('dragover', e => {
+      const dz = e.target.closest?.('.droppable');
+      if (!dz) return;
+      e.preventDefault();
+      dz.classList.add('drag-over');
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+
+      const id = state.draggingId;
+      if (!id) return;
+
+      // clear any existing previews
+      document.querySelectorAll('.drag-preview').forEach(el => el.remove());
+
+      if (dz.id === 'backlog') {
+        const tasks = Array.from(dz.querySelectorAll('.task')).filter(t => t.dataset.id !== id);
+        let index = tasks.length;
+        const target = e.target.closest('.task');
+        if (target) {
+          const rect = target.getBoundingClientRect();
+          const before = e.clientY < rect.top + rect.height / 2;
+          index = tasks.indexOf(target) + (before ? 0 : 1);
+        }
+        const preview = document.createElement('div');
+        preview.className = 'task drag-preview';
+        preview.style.position = 'static';
+        if (index >= tasks.length) dz.appendChild(preview);
+        else dz.insertBefore(preview, tasks[index]);
+        return;
+      }
+
+      if (dz.classList.contains('hour-dropzone')) {
+        const chips = Array.from(dz.querySelectorAll('.task-chip')).filter(c => c.dataset.taskid !== id && !c.classList.contains('dragging'));
+        let index = chips.length;
+        const target = e.target.closest('.task-chip');
+        if (target) {
+          const rect = target.getBoundingClientRect();
+          const before = e.clientX < rect.left + rect.width / 2;
+          index = chips.indexOf(target) + (before ? 0 : 1);
+        }
+        const preview = document.createElement('div');
+        preview.className = 'task-chip drag-preview';
+        preview.style.position = 'static';
+        if (index >= chips.length) dz.appendChild(preview);
+        else dz.insertBefore(preview, chips[index]);
+      }
+    });
+
+    document.addEventListener('dragleave', e => {
+      const dz = e.target.closest?.('.droppable');
+      if (!dz) return;
+      dz.classList.remove('drag-over');
+    });
+
+    document.addEventListener('drop', e => {
+      const dz = e.target.closest?.('.droppable');
+      if (!dz) return;
+      e.preventDefault();
+      dz.classList.remove('drag-over');
+      const id = state.draggingId;
+      if (!id) {
+        onDragEnd();
+        return;
+      }
+      const copy = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
+      let moved = getTaskById(id);
+      if (!moved) {
+        onDragEnd();
+        return;
+      }
+      if (copy) {
+        moved = {
+          id: Math.random().toString(36).slice(2, 9),
+          text: moved.text,
+          done: false,
+          cat: moved.cat,
+          timer: { elapsed: 0, running: false, startedAt: null }
+        };
+      } else {
         removeEverywhere(id);
       }
 
-      if(dz.id==='backlog'){
-        const target=e.target.closest('.task'); let index = state.day.backlog.length;
-        if(target){ const rect=target.getBoundingClientRect(); const before=e.clientY < (rect.top + rect.height/2);
-          const intoIdx=state.day.backlog.findIndex(t=>t.id===target.dataset.id); index = intoIdx + (before?0:1); }
-        state.day.backlog.splice(index,0,moved); persist(); render(); return;
+      if (dz.id === 'backlog') {
+        const target = e.target.closest('.task:not(.drag-preview)');
+        let index = state.day.backlog.length;
+        if (target) {
+          const rect = target.getBoundingClientRect();
+          const before = e.clientY < rect.top + rect.height / 2;
+          const intoIdx = state.day.backlog.findIndex(t => t.id === target.dataset.id);
+          index = intoIdx + (before ? 0 : 1);
+        }
+        state.day.backlog.splice(index, 0, moved);
+        persist();
+        render();
+        onDragEnd();
+        return;
       }
-      if(dz.classList.contains('hour-dropzone')){
+      if (dz.classList.contains('hour-dropzone')) {
         ensureTimer(moved); // timers available in hours
-        const hourKey=dz.dataset.hour, slots=state.day.hours[hourKey].slots;
-        const list=slots.filter(Boolean); const target=e.target.closest('.task-chip'); let dest=list.length;
-        if(target){ const rect=target.getBoundingClientRect(); const before=e.clientX < (rect.left + rect.width/2);
-          const intoIdx=list.findIndex(t=>t.id===target.dataset.taskid); dest = intoIdx + (before?0:1); }
-        list.splice(dest,0,moved); const trimmed=list.slice(0,4); for(let i=0;i<4;i++) slots[i]=trimmed[i]||null;
-        persist(); render(); return;
+        const hourKey = dz.dataset.hour, slots = state.day.hours[hourKey].slots;
+        const list = slots.filter(Boolean);
+        const target = e.target.closest('.task-chip:not(.drag-preview)');
+        let dest = list.length;
+        if (target) {
+          const rect = target.getBoundingClientRect();
+          const before = e.clientX < rect.left + rect.width / 2;
+          const intoIdx = list.findIndex(t => t.id === target.dataset.taskid);
+          dest = intoIdx + (before ? 0 : 1);
+        }
+        list.splice(dest, 0, moved);
+        const trimmed = list.slice(0, 4);
+        for (let i = 0; i < 4; i++) slots[i] = trimmed[i] || null;
+        persist();
+        render();
+        onDragEnd();
+        return;
       }
+      onDragEnd();
     });
     function getTaskById(id){
       const b=state.day.backlog.find(t=>t.id===id); if(b) return b;
