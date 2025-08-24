@@ -402,7 +402,7 @@ document.addEventListener(
       const copy=e.ctrlKey||e.metaKey||e.altKey||e.shiftKey;
       let moved=getTaskById(id); if(!moved) return;
       if(copy){
-        moved={ id:Math.random().toString(36).slice(2,9), text:moved.text, done:false, cat:moved.cat, timer:{elapsed:0,running:false,startedAt:null} };
+        moved={ id:newId(), text:moved.text, done:false, cat:moved.cat, timer:{elapsed:0,running:false,startedAt:null} };
       }else{
         removeEverywhere(id);
       }
