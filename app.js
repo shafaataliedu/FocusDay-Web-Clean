@@ -71,6 +71,9 @@
     const flashSaved=()=>{ el.saveStatus.textContent='Saved'; el.saveStatus.style.opacity='1'; setTimeout(()=>el.saveStatus.style.opacity='.85',600); };
     const persist=()=>{ state.all[state.day.dateISO]=JSON.parse(JSON.stringify(state.day)); saveAll(state.all); flashSaved(); };
 
+    // ensure all drop zones accept drops
+    $$('.droppable').forEach(dz=>dz.addEventListener('dragover', e=>e.preventDefault()));
+
     // ---- categories ----
     const allCategories = ()=> state.prefs.categories.slice();
     const hasCat = k => state.prefs.categories.includes(k);
@@ -335,14 +338,34 @@
       if(pause){ const id=pause.closest('.task')?.dataset.id; if(!id) return; pauseTimer(id); }
       if(reset){ const id=reset.closest('.task')?.dataset.id; if(!id) return; resetTimer(id); render(); }
 
-      const chip=e.target.closest?.('.task-chip');
-      if(chip && !chip.classList.contains('all-chip')){
-        window.openTaskModal && window.openTaskModal(chip.dataset.taskid);
-      }
+      // task modal opening handled via pointer events with drag threshold
+    });
 
-      const taskEl=e.target.closest?.('.task');
-      if(taskEl && !taskEl.closest('#hourModal') && !e.target.closest('button')){
-        window.openTaskModal && window.openTaskModal(taskEl.dataset.id);
+    // click vs drag threshold for tasks/chips
+    let pointerStart = null;
+    document.addEventListener('pointerdown', e => {
+      const t = e.target.closest?.('.task, .task-chip');
+      if(!t) return;
+      pointerStart = { x: e.clientX, y: e.clientY, el: t };
+    });
+    document.addEventListener('pointerup', e => {
+      if(!pointerStart) return;
+      const t = e.target.closest?.('.task, .task-chip');
+      if(t !== pointerStart.el) { pointerStart = null; return; }
+      const dx = Math.abs(e.clientX - pointerStart.x);
+      const dy = Math.abs(e.clientY - pointerStart.y);
+      pointerStart = null;
+      if(dx > 5 || dy > 5) return; // treated as drag, not click
+      if(t.classList.contains('task-chip')){
+        if(!t.classList.contains('all-chip')){
+          window.openTaskModal && window.openTaskModal(t.dataset.taskid);
+        }
+        return;
+      }
+      if(t.classList.contains('task')){
+        if(!t.closest('#hourModal') && !e.target.closest('button')){
+          window.openTaskModal && window.openTaskModal(t.dataset.id);
+        }
       }
     });
 
@@ -392,12 +415,15 @@ document.addEventListener(
         node.style.position = 'fixed';
         node.style.pointerEvents = 'none';
         node.style.zIndex = '1000';
-          node.classList.add('drag-image');
-          node.style.left = e.clientX + 'px';
-          node.style.top = e.clientY + 'px';
-          document.body.appendChild(node);
-          state.dragPreviewEl = node;
-        try { e.dataTransfer.setDragImage(node, 0, 0); } catch (err) {}
+        node.classList.add('drag-image');
+        document.body.appendChild(node);
+        const offX = node.offsetWidth / 2;
+        const offY = 16;
+        node.style.left = (e.clientX - offX) + 'px';
+        node.style.top = (e.clientY - offY) + 'px';
+        state.dragPreviewEl = node;
+        state.dragPreviewOffset = { x: offX, y: offY };
+        try { e.dataTransfer.setDragImage(node, offX, offY); } catch (err) {}
       }
     }
   },
@@ -413,6 +439,7 @@ document.addEventListener(
       state.draggingId = null;
       state.backlogPlaceholderIndex = null;
       if (state.dragPreviewEl) { state.dragPreviewEl.remove(); state.dragPreviewEl = null; }
+      state.dragPreviewOffset = null;
       onDragEnd();
     document.querySelectorAll('.droppable').forEach(el => {
       el.classList.remove('drag-over');
@@ -423,8 +450,9 @@ document.addEventListener(
 );
   document.addEventListener('dragover', e => {
       if (state.dragPreviewEl) {
-        state.dragPreviewEl.style.left = e.clientX + 'px';
-        state.dragPreviewEl.style.top = e.clientY + 'px';
+        const o = state.dragPreviewOffset || { x: 0, y: 0 };
+        state.dragPreviewEl.style.left = (e.clientX - o.x) + 'px';
+        state.dragPreviewEl.style.top = (e.clientY - o.y) + 'px';
       }
 
       const dz = e.target.closest?.('.droppable');
@@ -606,6 +634,10 @@ function onDragEnd() {
 
   function openModal(nodes, attach=true, title=''){
     const modal = $('#hourModal'); if(!modal) return;
+    if(modal.parentNode !== document.body){ document.body.appendChild(modal); }
+    modal.style.position = 'fixed';
+    modal.style.inset = '0';
+    modal.style.zIndex = '10000';
     const list  = $('#fd-modal-list'); list.innerHTML = '';
     const ttl = $('#fd-modal-title'); if(ttl) ttl.textContent = title;
     nodes.forEach(n=>{
