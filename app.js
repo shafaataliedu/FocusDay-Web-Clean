@@ -394,32 +394,95 @@ document.addEventListener(
   },
   true
 );
-    document.addEventListener('dragover', e=>{ const dz=e.target.closest?.('.droppable'); if(!dz) return; e.preventDefault(); dz.classList.add('drag-over'); if(e.dataTransfer) e.dataTransfer.dropEffect='move'; });
-    document.addEventListener('dragleave', e=>{ const dz=e.target.closest?.('.droppable'); if(!dz) return; dz.classList.remove('drag-over'); });
-    document.addEventListener('drop', e=>{
-      const dz=e.target.closest?.('.droppable'); if(!dz) return; e.preventDefault(); dz.classList.remove('drag-over');
-      const id=state.draggingId; if(!id) return;
-      const copy=e.ctrlKey||e.metaKey||e.altKey||e.shiftKey;
-      let moved=getTaskById(id); if(!moved) return;
-      if(copy){
-        moved={ id:Math.random().toString(36).slice(2,9), text:moved.text, done:false, cat:moved.cat, timer:{elapsed:0,running:false,startedAt:null} };
-      }else{
+    document.addEventListener('dragover', e => {
+      const dz = e.target.closest?.('.droppable');
+      if (!dz) return;
+      e.preventDefault();
+      dz.classList.add('drag-over');
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+
+      if (dz.id === 'backlog') {
+        const tasks = Array.from(dz.querySelectorAll('.task'))
+          .filter(t => t.dataset.id !== state.draggingId);
+        let index = tasks.length;
+        const target = e.target.closest('.task');
+        if (target && target.parentElement === dz) {
+          const rect = target.getBoundingClientRect();
+          const before = e.clientY < (rect.top + rect.height / 2);
+          index = tasks.indexOf(target) + (before ? 0 : 1);
+        }
+        let preview = dz.querySelector('.drag-preview');
+        const sample = target || tasks[0];
+        const h = sample ? sample.getBoundingClientRect().height : 40;
+        if (!preview) {
+          preview = document.createElement('div');
+          preview.className = 'drag-preview';
+        }
+        preview.style.height = h + 'px';
+        if (index >= tasks.length) dz.appendChild(preview); else dz.insertBefore(preview, tasks[index]);
+
+        const rect = dz.getBoundingClientRect();
+        const EDGE = 40, SCROLL = 10;
+        if (e.clientY - rect.top < EDGE) dz.scrollTop -= SCROLL;
+        else if (rect.bottom - e.clientY < EDGE) dz.scrollTop += SCROLL;
+      } else {
+        const pv = document.querySelector('#backlog .drag-preview');
+        if (pv) pv.remove();
+      }
+    });
+    document.addEventListener('dragleave', e => {
+      const dz = e.target.closest?.('.droppable');
+      if (!dz) return;
+      if (!dz.contains(e.relatedTarget)) {
+        dz.classList.remove('drag-over');
+        if (dz.id === 'backlog') {
+          const pv = dz.querySelector('.drag-preview');
+          if (pv) pv.remove();
+        }
+      }
+    });
+    document.addEventListener('drop', e => {
+      const dz = e.target.closest?.('.droppable');
+      if (!dz) return;
+      e.preventDefault();
+      dz.classList.remove('drag-over');
+      const id = state.draggingId;
+      if (!id) return;
+      const copy = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
+      let moved = getTaskById(id);
+      if (!moved) return;
+      if (copy) {
+        moved = { id: Math.random().toString(36).slice(2, 9), text: moved.text, done: false, cat: moved.cat, timer: { elapsed: 0, running: false, startedAt: null } };
+      } else {
         removeEverywhere(id);
       }
 
-      if(dz.id==='backlog'){
-        const target=e.target.closest('.task'); let index = state.day.backlog.length;
-        if(target){ const rect=target.getBoundingClientRect(); const before=e.clientY < (rect.top + rect.height/2);
-          const intoIdx=state.day.backlog.findIndex(t=>t.id===target.dataset.id); index = intoIdx + (before?0:1); }
-        state.day.backlog.splice(index,0,moved); persist(); render(); return;
+      if (dz.id === 'backlog') {
+        let index = state.day.backlog.length;
+        const preview = dz.querySelector('.drag-preview');
+        if (preview) {
+          index = Array.from(dz.children).indexOf(preview);
+        } else {
+          const target = e.target.closest('.task');
+          if (target) {
+            const rect = target.getBoundingClientRect();
+            const before = e.clientY < (rect.top + rect.height / 2);
+            const intoIdx = state.day.backlog.findIndex(t => t.id === target.dataset.id);
+            index = intoIdx + (before ? 0 : 1);
+          }
+        }
+        state.day.backlog.splice(index, 0, moved);
+        persist();
+        render();
+        return;
       }
-      if(dz.classList.contains('hour-dropzone')){
+      if (dz.classList.contains('hour-dropzone')) {
         ensureTimer(moved); // timers available in hours
-        const hourKey=dz.dataset.hour, slots=state.day.hours[hourKey].slots;
-        const list=slots.filter(Boolean); const target=e.target.closest('.task-chip'); let dest=list.length;
-        if(target){ const rect=target.getBoundingClientRect(); const before=e.clientX < (rect.left + rect.width/2);
-          const intoIdx=list.findIndex(t=>t.id===target.dataset.taskid); dest = intoIdx + (before?0:1); }
-        list.splice(dest,0,moved); const trimmed=list.slice(0,4); for(let i=0;i<4;i++) slots[i]=trimmed[i]||null;
+        const hourKey = dz.dataset.hour, slots = state.day.hours[hourKey].slots;
+        const list = slots.filter(Boolean); const target = e.target.closest('.task-chip'); let dest = list.length;
+        if (target) { const rect = target.getBoundingClientRect(); const before = e.clientX < (rect.left + rect.width / 2);
+          const intoIdx = list.findIndex(t => t.id === target.dataset.taskid); dest = intoIdx + (before ? 0 : 1); }
+        list.splice(dest, 0, moved); const trimmed = list.slice(0, 4); for (let i = 0; i < 4; i++) slots[i] = trimmed[i] || null;
         persist(); render(); return;
       }
     });
