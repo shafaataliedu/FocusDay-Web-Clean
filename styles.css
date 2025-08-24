@@ -61,7 +61,8 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
   flex-wrap:wrap;
   align-items:center;
   gap:8px;
-  overflow-x:auto;
+  /* allow chips to wrap onto new lines without forcing horizontal scroll */
+  overflow-x:visible;
   overflow-y:hidden;
   white-space:normal;
 }
@@ -92,6 +93,7 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
+  max-width:200px;
 }
 .task-chip.all-chip{font-weight:600}
 
@@ -99,6 +101,8 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 .task.dragging,
 .task-chip.dragging{
   opacity:.6;
+  /* prevent dragged element from capturing pointer events */
+  pointer-events:none;
 }
 
 .task-chip .title{
