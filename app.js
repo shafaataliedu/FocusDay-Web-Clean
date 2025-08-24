@@ -372,7 +372,7 @@ document.addEventListener(
       // Older Edge browsers only recognize 'text'
       try { e.dataTransfer.setData('text/plain', id); } catch (err) {}
       try { e.dataTransfer.setData('text', id); } catch (err) {}
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.effectAllowed = 'copyMove';
     }
     if (t.classList.contains('task-chip')) {
       t.classList.add('dragging');
@@ -391,7 +391,10 @@ document.addEventListener(
     }
     state.draggingId = null;
     onDragEnd();
-    document.querySelectorAll('.droppable').forEach(el => el.classList.remove('drag-over'));
+    document.querySelectorAll('.droppable').forEach(el => {
+      el.classList.remove('drag-over');
+      el.classList.remove('copy');
+    });
   },
   true
 );
@@ -399,8 +402,10 @@ document.addEventListener(
       const dz = e.target.closest?.('.droppable');
       if (!dz) return;
       e.preventDefault();
+      const copy = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
       dz.classList.add('drag-over');
-      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      dz.classList.toggle('copy', copy);
+      if (e.dataTransfer) e.dataTransfer.dropEffect = copy ? 'copy' : 'move';
 
       const id = state.draggingId;
       if (!id) return;
@@ -446,6 +451,7 @@ document.addEventListener(
       const dz = e.target.closest?.('.droppable');
       if (!dz) return;
       dz.classList.remove('drag-over');
+      dz.classList.remove('copy');
     });
 
     document.addEventListener('drop', e => {
@@ -453,6 +459,7 @@ document.addEventListener(
       if (!dz) return;
       e.preventDefault();
       dz.classList.remove('drag-over');
+      dz.classList.remove('copy');
       const id = state.draggingId;
       if (!id) {
         onDragEnd();
@@ -564,6 +571,7 @@ document.addEventListener(
 
 function onDragEnd() {
   document.querySelectorAll('.drag-preview').forEach(el => el.remove());
+  document.querySelectorAll('.droppable.copy').forEach(el => el.classList.remove('copy'));
 }
 (function(){
   const DZ_SEL = '.hour-dropzone, .hour-slot .dropzone, .hour .dropzone, .hour .tasks';
