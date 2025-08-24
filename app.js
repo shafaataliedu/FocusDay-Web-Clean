@@ -464,20 +464,6 @@ document.addEventListener(
   }
 })();
 
-function dropIntoHour(slotEl, chipEl) {
-  chipEl.style.position = '';
-  chipEl.style.transform = '';
-  chipEl.style.left = '';
-  chipEl.style.top = '';
-  chipEl.classList.add('task-chip');
-
-  const list =
-    slotEl.querySelector('.task-lane') ||
-    slotEl.appendChild(Object.assign(document.createElement('div'), { className: 'task-lane' }));
-
-  list.appendChild(chipEl);
-}
-
 function onDragEnd() {
   document.querySelectorAll('.drag-preview').forEach(el => el.remove());
 }
@@ -488,9 +474,10 @@ function onDragEnd() {
   const $  = (s,r=document)=>r.querySelector(s);
   const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
 
-  function openModal(nodes, attach=true){
+  function openModal(nodes, attach=true, title=''){
     const modal = $('#hourModal'); if(!modal) return;
     const list  = $('#fd-modal-list'); list.innerHTML = '';
+    const ttl = $('#fd-modal-title'); if(ttl) ttl.textContent = title;
     nodes.forEach(n=>{
       const clone = n.cloneNode(true);
       clone.removeAttribute('draggable');
@@ -516,7 +503,7 @@ function onDragEnd() {
   function openHourModal(slotId){
     const dz = document.querySelector('.hour-dropzone[data-hour="'+slotId+'"]');
     if(!dz) return;
-    openModal($$('.task', dz), true);
+    openModal($$('.task', dz), true, 'Tasks at '+slotId);
   }
 
   function openTaskModal(taskId){
@@ -527,7 +514,7 @@ function onDragEnd() {
     if(!task) return;
     const hour = window.fdFindTaskHour ? window.fdFindTaskHour(taskId) : null;
     const node = makeNode(task, !!hour);
-    openModal([node], false);
+    openModal([node], false, task.text || 'Task');
     if(hour){
       const list = document.getElementById('fd-modal-list');
       if(list){
@@ -579,8 +566,13 @@ function onDragEnd() {
 
     // move tasks into list (hidden) and reset positioning
     tasks.forEach(t=>{
-      dropIntoHour(dz, t);
+      t.classList.remove('task-chip');
+      t.style.position = '';
+      t.style.transform = '';
+      t.style.left = '';
+      t.style.top = '';
       t.style.display='none';
+      list.appendChild(t);
     });
 
     const MAX_VISIBLE = 3;
