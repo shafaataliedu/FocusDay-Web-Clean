@@ -359,6 +359,15 @@
       }
     }
 
+    // Determine insertion index for a chip based on cursor X position
+    function chipIndexFromX(chips, x){
+      for(let i=0;i<chips.length;i++){
+        const rect = chips[i].getBoundingClientRect();
+        if(x < rect.left + rect.width/2) return i;
+      }
+      return chips.length;
+    }
+
     // ---- DnD for tasks ----
 document.addEventListener(
   'dragstart',
@@ -468,14 +477,9 @@ document.addEventListener('dragover', e => {
           lane.className = 'task-lane';
           dz.appendChild(lane);
         }
-        const chips = Array.from(lane.querySelectorAll('.task-chip')).filter(c => c.dataset.taskid !== id && !c.classList.contains('dragging'));
-        let index = chips.length;
-        const target = e.target.closest('.task-chip');
-        if (target && lane.contains(target)) {
-          const rect = target.getBoundingClientRect();
-          const before = e.clientX < rect.left + rect.width / 2;
-          index = chips.indexOf(target) + (before ? 0 : 1);
-        }
+        const chips = Array.from(lane.querySelectorAll('.task-chip'))
+          .filter(c => c.dataset.taskid !== id && !c.classList.contains('dragging'));
+        const index = chipIndexFromX(chips, e.clientX);
         const preview = document.createElement('div');
         preview.className = 'task-chip drag-preview';
         preview.style.position = 'static';
@@ -537,14 +541,7 @@ document.addEventListener('dragover', e => {
         const list = slots.filter(Boolean);
         const lane = dz.querySelector('.task-lane');
         const chips = lane ? Array.from(lane.querySelectorAll('.task-chip')).filter(c => !c.classList.contains('drag-preview')) : [];
-        const target = e.target.closest('.task-chip:not(.drag-preview)');
-        let dest = list.length;
-        if (target && chips.includes(target)) {
-          const rect = target.getBoundingClientRect();
-          const before = e.clientX < rect.left + rect.width / 2;
-          const intoIdx = chips.indexOf(target);
-          dest = intoIdx + (before ? 0 : 1);
-        }
+        const dest = chipIndexFromX(chips, e.clientX);
         list.splice(dest, 0, moved);
         const trimmed = list.slice(0, 4);
         for (let i = 0; i < 4; i++) slots[i] = trimmed[i] || null;
