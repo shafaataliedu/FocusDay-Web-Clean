@@ -158,7 +158,7 @@
     function rafLoop(now){
       if(now-lastFrame>=FRAME_MS){
         lastFrame=now;
-        $$('.task.in-hour .timer-time').forEach(span=>{
+        $$('.timer-time').forEach(span=>{
           const id=span.closest('.task').dataset.id;
           const t=getTaskById(id); if(!t) return;
           span.textContent=fmtDur(taskElapsedSeconds(t));
@@ -169,24 +169,25 @@
     function ensureRaf(){ if(!rafId && anyRunning()) rafId=requestAnimationFrame(rafLoop); }
 
     function updateTimerBtn(id){
-      const node=document.querySelector('.task[data-id="'+id+'"]'); if(!node) return;
-      const btn=node.querySelector('.timer-btn.toggle'); if(!btn) return;
       const t=getTaskById(id); if(!t) return;
       const running=!!t.timer?.running;
-      btn.classList.remove('pop');
-      void btn.offsetWidth;
-      btn.classList.add('pop');
-      btn.classList.toggle('running', running);
-      btn.textContent = running ? '⏸' : '▶️';
-      btn.setAttribute('aria-pressed', running);
-      btn.setAttribute('aria-label', running ? 'Pause timer' : 'Start timer');
-      btn.title = running ? 'Pause' : 'Start';
+      document.querySelectorAll('.task[data-id="'+id+'"] .timer-btn.toggle').forEach(btn=>{
+        btn.classList.remove('pop');
+        void btn.offsetWidth;
+        btn.classList.add('pop');
+        btn.classList.toggle('running', running);
+        btn.textContent = running ? '⏸' : '▶️';
+        btn.setAttribute('aria-pressed', running);
+        btn.setAttribute('aria-label', running ? 'Pause timer' : 'Start timer');
+        btn.title = running ? 'Pause' : 'Start';
+      });
     }
     function updateTimerTime(id){
-      const node=document.querySelector('.task[data-id="'+id+'"]');
-      const span=node?.querySelector('.timer-time');
-      const t=getTaskById(id);
-      if(span && t){ span.textContent=fmtDur(taskElapsedSeconds(t)); }
+      const t=getTaskById(id); if(!t) return;
+      const text=fmtDur(taskElapsedSeconds(t));
+      document.querySelectorAll('.task[data-id="'+id+'"] .timer-time').forEach(span=>{
+        span.textContent=text;
+      });
     }
     function startTimer(id){
       const task=getTaskById(id); if(!task) return;
