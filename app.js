@@ -114,30 +114,116 @@
 
     // ---- timers ----
     function ensureTimer(task){
-      if(!task.timer) task.timer={ elapsed:0, running:false, startedAt:null };
+      if(!task.timer){
+        task.timer={ elapsedMs:0, running:false, startedAt:null, startPerf:null, startElapsedMs:0 };
+      }else{
+        const t=task.timer;
+        if(typeof t.elapsed==='number' && t.elapsedMs===undefined){
+          t.elapsedMs = t.elapsed*1000; delete t.elapsed;
+        }
+        if(t.startElapsedMs===undefined) t.startElapsedMs = t.elapsedMs||0;
+        if(t.running){
+          if(t.startPerf==null){
+            if(typeof t.startedAt==='number') t.elapsedMs += Date.now()-t.startedAt;
+            t.startElapsedMs = t.elapsedMs;
+            t.startPerf = performance.now();
+          }
+        }else{
+          t.startedAt=null; t.startPerf=null; t.startElapsedMs=t.elapsedMs;
+        }
+      }
       return task.timer;
     }
-    function taskElapsedSeconds(task){
+    function taskElapsedMs(task){
       const t=ensureTimer(task);
-      if(t.running && t.startedAt){ return t.elapsed + Math.floor((Date.now()-t.startedAt)/1000); }
-      return t.elapsed;
+      if(t.running && t.startPerf!==null){
+        return t.startElapsedMs + (performance.now()-t.startPerf);
+      }
+      return t.elapsedMs;
+    }
+    function taskElapsedSeconds(task){
+      return Math.floor(taskElapsedMs(task)/1000);
+    }
+
+    let rafId=null, lastFrame=0;
+    const FRAME_MS=120;
+    function anyRunning(){
+      if(!state.day) return false;
+      if(state.day.backlog.some(t=>t?.timer?.running)) return true;
+      for(const hk of Object.keys(state.day.hours)){
+        if(state.day.hours[hk].slots.some(t=>t?.timer?.running)) return true;
+      }
+      return false;
+    }
+    function rafLoop(now){
+      if(now-lastFrame>=FRAME_MS){
+        lastFrame=now;
+        $$('.task.in-hour .timer-time').forEach(span=>{
+          const id=span.closest('.task').dataset.id;
+          const t=getTaskById(id); if(!t) return;
+          span.textContent=fmtDur(taskElapsedSeconds(t));
+        });
+      }
+      if(anyRunning()) rafId=requestAnimationFrame(rafLoop); else rafId=null;
+    }
+    function ensureRaf(){ if(!rafId && anyRunning()) rafId=requestAnimationFrame(rafLoop); }
+
+    function updateTimerBtn(id){
+      const node=document.querySelector('.task[data-id="'+id+'"]'); if(!node) return;
+      const btn=node.querySelector('.timer-btn.toggle'); if(!btn) return;
+      const t=getTaskById(id); if(!t) return;
+      const running=!!t.timer?.running;
+      btn.classList.remove('pop');
+      void btn.offsetWidth;
+      btn.classList.add('pop');
+      btn.classList.toggle('running', running);
+      btn.textContent = running ? '⏸' : '▶️';
+      btn.setAttribute('aria-pressed', running);
+      btn.setAttribute('aria-label', running ? 'Pause timer' : 'Start timer');
+      btn.title = running ? 'Pause' : 'Start';
+    }
+    function updateTimerTime(id){
+      const node=document.querySelector('.task[data-id="'+id+'"]');
+      const span=node?.querySelector('.timer-time');
+      const t=getTaskById(id);
+      if(span && t){ span.textContent=fmtDur(taskElapsedSeconds(t)); }
     }
     function startTimer(id){
       const task=getTaskById(id); if(!task) return;
       const t=ensureTimer(task);
-      if(!t.running){ t.running=true; t.startedAt=Date.now(); persist(); }
+      if(!t.running){
+        t.running=true;
+        t.startPerf=performance.now();
+        t.startElapsedMs=t.elapsedMs;
+        t.startedAt=Date.now();
+        persist();
+        ensureRaf();
+        updateTimerBtn(id);
+        updateTimerTime(id);
+      }
     }
     function pauseTimer(id){
       const task=getTaskById(id); if(!task) return;
       const t=ensureTimer(task);
       if(t.running){
-        t.elapsed += Math.floor((Date.now()-t.startedAt)/1000);
-        t.running=false; t.startedAt=null; persist();
+        t.elapsedMs = t.startElapsedMs + (performance.now()-t.startPerf);
+        t.running=false;
+        t.startedAt=null;
+        t.startPerf=null;
+        t.startElapsedMs=t.elapsedMs;
+        persist();
+        updateTimerBtn(id);
+        updateTimerTime(id);
+        ensureRaf();
       }
     }
     function resetTimer(id){
       const task=getTaskById(id); if(!task) return;
-      task.timer={ elapsed:0, running:false, startedAt:null }; persist();
+      task.timer={ elapsedMs:0, running:false, startedAt:null, startPerf:null, startElapsedMs:0 };
+      persist();
+      updateTimerBtn(id);
+      updateTimerTime(id);
+      ensureRaf();
     }
 
     // ---- task node ----
@@ -157,13 +243,18 @@
         ensureTimer(task);
         const box=document.createElement('div'); box.className='timer-box';
         const time=document.createElement('span'); time.className='timer-time'; time.textContent=fmtDur(taskElapsedSeconds(task));
-        const play=document.createElement('button'); play.className='timer-btn play'; play.title='Start'; play.textContent='▶';
-        const pause=document.createElement('button'); pause.className='timer-btn pause'; pause.title='Pause'; pause.textContent='⏸';
+        const toggle=document.createElement('button'); toggle.className='timer-btn toggle';
+        const running=task.timer?.running;
+        toggle.textContent = running ? '⏸' : '▶️';
+        toggle.title = running ? 'Pause' : 'Start';
+        toggle.setAttribute('aria-label', running ? 'Pause timer' : 'Start timer');
+        toggle.setAttribute('aria-pressed', running);
+        if(running) toggle.classList.add('running');
         const reset=document.createElement('button'); reset.className='timer-btn reset'; reset.title='Reset'; reset.textContent='⟲';
-        box.append(time, play, pause, reset);
+        box.append(time, toggle, reset);
         const actions = n.querySelector('.task-actions');
-      n.insertBefore(box, actions || null);
-}
+        n.insertBefore(box, actions || null);
+      }
       return n;
     }
 
@@ -237,6 +328,7 @@
       updateCategorySelect();
       document.dispatchEvent(new Event('fdDayGridRendered'));
       if(typeof window.fdRefreshAll==='function') window.fdRefreshAll();
+      ensureRaf();
     }
 
     // ---- add task ----
@@ -319,8 +411,7 @@
     document.addEventListener('click', e=>{
       const done=e.target.closest?.('.done-btn');
       const del=e.target.closest?.('.delete-btn');
-      const play=e.target.closest?.('.timer-btn.play');
-      const pause=e.target.closest?.('.timer-btn.pause');
+      const toggle=e.target.closest?.('.timer-btn.toggle');
       const reset=e.target.closest?.('.timer-btn.reset');
 
       if(done){
@@ -334,11 +425,24 @@
         persist(); render();
       }
       if(del){ const id=del.closest('.task')?.dataset.id; if(!id) return; removeEverywhere(id); persist(); render(); }
-      if(play){ const id=play.closest('.task')?.dataset.id; if(!id) return; startTimer(id); }
-      if(pause){ const id=pause.closest('.task')?.dataset.id; if(!id) return; pauseTimer(id); }
+      if(toggle){ const id=toggle.closest('.task')?.dataset.id; if(!id) return; const running=getTaskById(id)?.timer?.running; running? pauseTimer(id) : startTimer(id); }
       if(reset){ const id=reset.closest('.task')?.dataset.id; if(!id) return; resetTimer(id); render(); }
 
       // task modal opening handled via pointer events with drag threshold
+    });
+
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.visibilityState!=='visible' || !state.day) return;
+      const adjust=t=>{
+        if(t?.timer?.running && t.timer.startPerf!=null){
+          t.timer.startElapsedMs += performance.now()-t.timer.startPerf;
+          t.timer.startPerf = performance.now();
+        }
+      };
+      state.day.backlog.forEach(adjust);
+      for(const hk of Object.keys(state.day.hours)){
+        state.day.hours[hk].slots.forEach(t=>t&&adjust(t));
+      }
     });
 
     // click vs drag threshold for tasks/chips
@@ -592,20 +696,6 @@ document.addEventListener(
     window.fdFindTaskHour = findTaskHour;
     window.fdGetHourTasks = hour => (state.day.hours[hour]?.slots.filter(Boolean) || []);
     window.fdCreateTaskNode = (task, inHour=false) => createTaskNode(task, inHour);
-
-    // ---- update timer text every second (lightweight, no full render) ----
-    setInterval(()=>{
-      const now=Date.now();
-      $$('.task.in-hour .timer-time').forEach(span=>{
-        const id=span.closest('.task').dataset.id;
-        const t=getTaskById(id);
-        if(!t) return;
-        const running=t.timer?.running && t.timer?.startedAt;
-        const base=t.timer?.elapsed||0;
-        const secs = running ? base + Math.floor((now - t.timer.startedAt)/1000) : base;
-        span.textContent = fmtDur(secs);
-      });
-    }, 1000);
 
     // ---- date controls & init ----
     const shift=n=>{ const d=new Date(el.datePicker.value||getTodayISO()); d.setDate(d.getDate()+n); setActiveDate(d.toISOString().slice(0,10)); };
