@@ -217,10 +217,21 @@ input[type="date"],.main-goal-input,.add-row input,.cat-select{background:var(--
 .timer-btn{
   border:1px solid var(--grid-line); background:#fff; border-radius:8px;
   padding:2px 6px; line-height:1.2; cursor:pointer;
+  transition:transform 120ms ease, box-shadow 200ms ease, background 200ms ease;
+  outline:none;
+}
+.timer-btn.running{
+  background:#e7f5ff;
+  box-shadow:0 0 0 3px rgba(30,144,255,.25);
 }
 .timer-btn:hover{border-color:var(--accent)}
-.timer-btn.play{ }
-.timer-btn.pause{ }
+.timer-btn:active{transform:scale(0.97);}
+.timer-btn.pop{animation:pop 180ms ease-out;}
+@keyframes pop{
+  0%{transform:scale(0.94);box-shadow:0 0 0 0 rgba(30,144,255,.5);}
+  60%{transform:scale(1.06);box-shadow:0 0 0 6px rgba(30,144,255,.3);}
+  100%{transform:scale(1);box-shadow:0 0 0 0 rgba(30,144,255,0);}
+}
 .timer-btn.reset{ }
 
 
