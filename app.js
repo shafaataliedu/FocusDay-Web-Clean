@@ -69,7 +69,66 @@
     const state={ all, day:null, draggingId:null, backlogPlaceholderIndex:null, filterCat:null, prefs, dragPreviewEl:null };
 
     const flashSaved=()=>{ el.saveStatus.textContent='Saved'; el.saveStatus.style.opacity='1'; setTimeout(()=>el.saveStatus.style.opacity='.85',600); };
-    const persist=()=>{ state.all[state.day.dateISO]=JSON.parse(JSON.stringify(state.day)); saveAll(state.all); flashSaved(); };
+
+    const visitTasks=(day, cb)=>{
+      if(!day || typeof cb!=='function') return;
+      day.backlog?.forEach((task, idx)=>{ if(task) cb(task, { section:'backlog', index:idx }); });
+      const hours=day.hours||{};
+      for(const hourKey of Object.keys(hours)){
+        const slots=hours[hourKey]?.slots||[];
+        slots.forEach((task, idx)=>{ if(task) cb(task, { section:'hour', hour:hourKey, index:idx }); });
+      }
+    };
+
+    const persist=()=>{
+      const clone=JSON.parse(JSON.stringify(state.day));
+      visitTasks(clone, task=>{
+        const timer=task.timer;
+        if(timer){
+          if(typeof timer.elapsed==='number' && timer.elapsedMs===undefined){
+            timer.elapsedMs = timer.elapsed*1000;
+            delete timer.elapsed;
+          }
+          if(timer.running){
+            timer.startPerf=null;
+          }
+        }
+      });
+      state.all[clone.dateISO]=clone;
+      saveAll(state.all);
+      flashSaved();
+    };
+
+    const rehydrateDayTimers=day=>{
+      if(!day) return;
+      visitTasks(day, task=>{
+        const timer=task.timer;
+        if(!timer) return;
+        if(typeof timer.elapsed==='number' && timer.elapsedMs===undefined){
+          timer.elapsedMs = timer.elapsed*1000;
+          delete timer.elapsed;
+        }
+        if(typeof timer.elapsedMs!=='number') timer.elapsedMs = 0;
+        if(typeof timer.startElapsedMs!=='number') timer.startElapsedMs = timer.elapsedMs;
+        if(timer.running){
+          const base = typeof timer.startElapsedMs==='number' ? timer.startElapsedMs : timer.elapsedMs;
+          const wallNow = Date.now();
+          if(typeof timer.startedAt==='number'){
+            timer.elapsedMs = base + Math.max(0, wallNow - timer.startedAt);
+          }else{
+            timer.startedAt = wallNow;
+            timer.elapsedMs = base;
+          }
+          timer.startElapsedMs = timer.elapsedMs;
+          timer.startPerf = performance.now();
+        }else{
+          timer.running=false;
+          timer.startedAt=null;
+          timer.startPerf=null;
+          timer.startElapsedMs = timer.elapsedMs;
+        }
+      });
+    };
 
     // ensure all drop zones accept drops
     $$('.droppable').forEach(dz=>dz.addEventListener('dragover', e=>e.preventDefault()));
@@ -708,7 +767,13 @@ document.addEventListener(
 
     // ---- date controls & init ----
     const shift=n=>{ const d=new Date(el.datePicker.value||getTodayISO()); d.setDate(d.getDate()+n); setActiveDate(d.toISOString().slice(0,10)); };
-    const setActiveDate=iso=>{ el.datePicker.value=iso; if(!state.all[iso]) state.all[iso]=defaultDay(iso); state.day=JSON.parse(JSON.stringify(state.all[iso])); render(); };
+    const setActiveDate=iso=>{
+      el.datePicker.value=iso;
+      if(!state.all[iso]) state.all[iso]=defaultDay(iso);
+      state.day=JSON.parse(JSON.stringify(state.all[iso]));
+      rehydrateDayTimers(state.day);
+      render();
+    };
 
     el.mainGoal.addEventListener('input', ()=>{ state.day.mainGoal=el.mainGoal.value; persist(); });
     el.prevDay.addEventListener('click', ()=> shift(-1));
