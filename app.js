@@ -85,31 +85,39 @@
       return k;
     }
     function setDefaultCat(k){ if(!hasCat(k)) return; state.prefs.defaultCat=k; savePrefs(state.prefs); renderFilters(); renderModalList(); }
+    function remapCategory(day, fromKey, toKey){
+      if(!day || !fromKey || !toKey || fromKey===toKey) return;
+      day.backlog?.forEach(t=>{ if(t && t.cat===fromKey) t.cat=toKey; });
+      const hours=day.hours||{};
+      for(const hk of Object.keys(hours)){
+        const slots=hours[hk]?.slots||[];
+        for(let i=0;i<slots.length;i++){
+          const task=slots[i];
+          if(task && task.cat===fromKey) task.cat=toKey;
+        }
+      }
+    }
     function renameCategory(oldKey, newName){
       const nk=slug(newName); if(!nk || oldKey===nk) return;
       if(!hasCat(oldKey)) return;
       if(!hasCat(nk)) state.prefs.categories.push(nk);
       if(!LABEL[nk]) LABEL[nk]=title(newName);
-      for(const d of Object.keys(state.all)){
-        const day=state.all[d];
-        day.backlog.forEach(t=>{ if(t.cat===oldKey) t.cat=nk; });
-        for(const hk of Object.keys(day.hours)){ const s=day.hours[hk].slots; for(let i=0;i<s.length;i++){ if(s[i] && s[i].cat===oldKey) s[i].cat=nk; } }
-      }
+      for(const day of Object.values(state.all)) remapCategory(day, oldKey, nk);
+      remapCategory(state.day, oldKey, nk);
       state.prefs.categories = state.prefs.categories.filter(c=>c!==oldKey);
       if(state.prefs.defaultCat===oldKey) state.prefs.defaultCat=nk;
+      if(state.filterCat===oldKey) state.filterCat=nk;
       savePrefs(state.prefs); saveAll(state.all); updateCategorySelect(); render(); renderModalList();
     }
     function deleteCategory(k){
       if(BUILTIN.includes(k)) return alert('Built-in categories cannot be deleted.');
       if(!hasCat(k)) return;
-      for(const d of Object.keys(state.all)){
-        const day=state.all[d];
-        day.backlog.forEach(t=>{ if(t.cat===k) t.cat='other'; });
-        for(const hk of Object.keys(day.hours)){ const s=day.hours[hk].slots; for(let i=0;i<s.length;i++){ if(s[i] && s[i].cat===k) s[i].cat='other'; } }
-      }
+      for(const day of Object.values(state.all)) remapCategory(day, k, 'other');
+      remapCategory(state.day, k, 'other');
       state.prefs.categories = state.prefs.categories.filter(c=>c!==k);
       if(state.prefs.defaultCat===k) state.prefs.defaultCat='other';
-      savePrefs(state.prefs); saveAll(state.all); updateCategorySelect(); render(); renderModalList();
+      if(state.filterCat===k) state.filterCat=null;
+      savePrefs(state.prefs); persist(); updateCategorySelect(); render(); renderModalList();
     }
 
     // ---- timers ----
